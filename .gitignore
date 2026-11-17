@@ -1,0 +1,59 @@
+# === AI Tool Directories & Caches (NEVER stage or commit) ===
+.agents/
+.agent/
+.claude/
+.gemini/
+.superpowers/
+.gstack/
+.cursor/
+.windsurf/
+.antigravity/
+graphify-out/
+.omg/
+
+# === AI Instruction & Plan Files (NEVER stage or commit) ===
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+COPILOT.md
+.cursorrules
+.windsurfrules
+plan.md
+implementation_plan.md
+walkthrough.md
+task.md
+
+# === Node / TypeScript Backend ===
+node_modules/
+dist/
+build/
+.env
+.env.*
+!.env.example
+*.log
+npm-debug.log*
+apps/backend/data/*.json
+apps/backend/coverage/
+
+# === Flutter / Dart Client ===
+.dart_tool/
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
+apps/flutter_client/build/
+apps/flutter_client/.dart_tool/
+apps/flutter_client/ios/Pods/
+apps/flutter_client/macos/Pods/
+apps/flutter_client/*.iml
+
+# === Cryptographic Keys & BIR Certificates (NEVER stage or commit) ===
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+
+# === macOS / IDE ===
+.DS_Store
+.idea/
+.vscode/
