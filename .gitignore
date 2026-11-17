@@ -57,3 +57,15 @@ apps/flutter_client/*.iml
 .DS_Store
 .idea/
 .vscode/
+
+# Gene - Nov, 17, 2026: Added Serverpod ignore patterns and archived previous TS prototype stack.
+_archived_ts_stack/
+eis_server/data/*.json
+eis_server/config/passwords.yaml
+eis_server/.dart_tool/
+eis_client/.dart_tool/
+eis_flutter/.dart_tool/
+eis_flutter/build/
+eis_flutter/ios/Pods/
+eis_flutter/macos/Pods/
+eis_flutter/*.iml
