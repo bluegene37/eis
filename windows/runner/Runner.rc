@@ -90,12 +90,17 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "dev.genexis" "\0"
-            VALUE "FileDescription", "eis_v2" "\0"
+            // VALUE "FileDescription", "eis_v2" "\0"
+            // VALUE "InternalName", "eis_v2" "\0"
+            // VALUE "OriginalFilename", "eis_v2.exe" "\0"
+            // VALUE "ProductName", "eis_v2" "\0"
+            // Gene - Nov, 20, 2026: Renamed Windows RC application metadata from eis_v2 to EIS / eis.
+            VALUE "FileDescription", "EIS" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "eis_v2" "\0"
+            VALUE "InternalName", "eis" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 dev.genexis. All rights reserved." "\0"
-            VALUE "OriginalFilename", "eis_v2.exe" "\0"
-            VALUE "ProductName", "eis_v2" "\0"
+            VALUE "OriginalFilename", "eis.exe" "\0"
+            VALUE "ProductName", "EIS" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

@@ -5,10 +5,13 @@
 // 'flutter create' template.
 
 // The application's name. By default this is also the title of the Flutter window.
-PRODUCT_NAME = eis_v2
+// PRODUCT_NAME = eis_v2
+// Gene - Nov, 20, 2026: Renamed macOS product name & bundle identifier from eis_v2 / dev.genexis.eisV2 to eis / dev.genexis.eis.
+PRODUCT_NAME = eis
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = dev.genexis.eisV2
+// PRODUCT_BUNDLE_IDENTIFIER = dev.genexis.eisV2
+PRODUCT_BUNDLE_IDENTIFIER = dev.genexis.eis
 
 // The copyright displayed in application information
 PRODUCT_COPYRIGHT = Copyright © 2026 dev.genexis. All rights reserved.

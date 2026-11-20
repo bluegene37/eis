@@ -1,0 +1,4 @@
+tags:
+  integration: {}
+# Gene - Nov, 17, 2026: Run Serverpod integration suites sequentially so test servers do not contend on port 8080.
+concurrency: 1

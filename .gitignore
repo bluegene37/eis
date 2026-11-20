@@ -80,3 +80,10 @@ eis_v2_store.json
 *.p12
 *.pfx
 *.crt
+
+# Gene - Nov, 20, 2026: Ignore renamed eis_store.json and nested Serverpod build caches / local data / secrets.
+eis_store.json
+server/eis_server/data/*.json
+server/eis_server/config/passwords.yaml
+server/eis_server/.dart_tool/
+server/eis_client/.dart_tool/

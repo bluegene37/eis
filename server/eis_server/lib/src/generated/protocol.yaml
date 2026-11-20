@@ -1,0 +1,19 @@
+eis:
+  - getDashboardSummary:
+  - updateGatewayConfig:
+  - getTaxpayers:
+  - registerTaxpayer:
+  - rotateTaxpayerKeys:
+  - getInvoices:
+  - createInvoice:
+  - processRetryQueue:
+  - issueCreditMemo:
+  - syncConnector:
+  - importCsvBatch:
+  - getCasBooks:
+  - generateSlsp:
+  - generateWithholdingDat:
+  - generateForm2307:
+  - getAuditTrail:
+greeting:
+  - hello:

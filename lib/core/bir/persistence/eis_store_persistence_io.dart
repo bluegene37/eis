@@ -34,7 +34,9 @@ EisStorePersistence? createFilePersistence(String? path) {
 Future<String?> resolveDefaultStorePath() async {
   try {
     final dir = await getApplicationSupportDirectory();
-    return '${dir.path}${Platform.pathSeparator}eis_v2_store.json';
+    // return '${dir.path}${Platform.pathSeparator}eis_v2_store.json';
+    // Gene - Nov, 20, 2026: Renamed local persistence filename from eis_v2_store.json to eis_store.json.
+    return '${dir.path}${Platform.pathSeparator}eis_store.json';
   } catch (_) {
     // Fallback to in-memory engine when platform channels are unavailable (e.g., widget/unit tests).
     return null;

@@ -1,13 +1,19 @@
 // Gene - Nov, 20, 2026: Ported BIR EIS/CAS widget & calculator tests from eis_flutter and added full embedded-engine UI integration test.
 import 'dart:convert';
-import 'package:eis_v2/core/bir/eis_engine_service.dart';
-import 'package:eis_v2/main.dart';
-import 'package:eis_v2/models/ies_models.dart';
-import 'package:eis_v2/services/ies_api_client.dart';
+// import 'package:eis_v2/core/bir/eis_engine_service.dart';
+// import 'package:eis_v2/main.dart';
+// import 'package:eis_v2/models/ies_models.dart';
+// import 'package:eis_v2/services/ies_api_client.dart';
+// Gene - Nov, 20, 2026: Updated package imports from eis_v2 to eis.
+import 'package:eis/core/bir/eis_engine_service.dart';
+import 'package:eis/main.dart';
+import 'package:eis/models/ies_models.dart';
+import 'package:eis/services/ies_api_client.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:serverpod_flutter/serverpod_flutter.dart';
 
 IesApiClient buildMockApiClient() {
   final mockHttp = MockClient((request) async {
@@ -250,6 +256,50 @@ void main() {
     await tester.tap(find.text('EIS Command'));
     await tester.pumpAndSettle();
     expect(find.text('6 / 6'), findsOneWidget);
+  });
+
+  // Gene - Nov, 20, 2026: Verify 3-mode backend dialog (Local, Serverpod, REST) and buildServerpodApiClient normalization.
+  testWidgets(
+      'Backend Mode dialog exposes Local, Serverpod, and REST options and configures Serverpod client',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1280, 860);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final serverpodApi = buildServerpodApiClient('http://localhost:8080');
+    expect(serverpodApi.isServerpod, isTrue);
+    expect(serverpodApi.isEmbedded, isFalse);
+    expect(serverpodApi.backendMode, EisBackendMode.serverpod);
+    expect(serverpodApi.modeChipLabel, 'Serverpod RPC');
+    // expect(serverpodApi.baseUrl, 'http://localhost:8080/');
+    // Gene - Nov, 20, 2026: Assert against serverpod_flutter's platform-resolved `localhost` (10.0.2.2 in widget tests targeting Android).
+    expect(serverpodApi.baseUrl, 'http://$localhost:8080/');
+    expect(serverpodApi.baseUrl.endsWith('/'), isTrue);
+
+    final engine = EisEngineService(persistPath: null);
+    await engine.seedDefaultDemoDataIfEmpty();
+
+    await tester.pumpWidget(
+      IesApp(
+        apiClient: IesApiClient(engineProvider: () async => engine),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Local Engine'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Backend Execution Mode'), findsOneWidget);
+    expect(find.text('Local'), findsOneWidget);
+    expect(find.text('Serverpod'), findsOneWidget);
+    expect(find.text('REST'), findsOneWidget);
+
+    await tester.tap(find.text('Serverpod'));
+    await tester.pumpAndSettle();
+    expect(find.text('Serverpod RPC URL'), findsOneWidget);
+
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
   });
 }
 

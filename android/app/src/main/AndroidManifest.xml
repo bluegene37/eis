@@ -1,8 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Gene - Nov, 20, 2026: Enable Internet permission for BIR Certification Sandbox / Production and optional Remote REST API mode. -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Gene - Nov, 20, 2026: Renamed Android app label from eis_v2 to EIS (original label: eis_v2). -->
     <application
-        android:label="eis_v2"
+        android:label="EIS"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

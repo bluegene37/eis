@@ -5,7 +5,9 @@ plugins {
 }
 
 android {
-    namespace = "dev.genexis.eis_v2"
+    // namespace = "dev.genexis.eis_v2"
+    // Gene - Nov, 20, 2026: Renamed Android namespace from dev.genexis.eis_v2 to dev.genexis.eis.
+    namespace = "dev.genexis.eis"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -16,7 +18,9 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "dev.genexis.eis_v2"
+        // applicationId = "dev.genexis.eis_v2"
+        // Gene - Nov, 20, 2026: Renamed Android applicationId from dev.genexis.eis_v2 to dev.genexis.eis.
+        applicationId = "dev.genexis.eis"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

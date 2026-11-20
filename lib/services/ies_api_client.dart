@@ -1,6 +1,8 @@
 // Gene - Nov, 20, 2026: Dual-mode client supporting embedded local pure-Dart BIR EIS/CAS engine (default standalone) and optional Remote REST API / MockClient HTTP transport.
+// Gene - Nov, 20, 2026: Extended to 3-mode client supporting Local Embedded Engine, Serverpod RPC (:8080 via eis_client), and Remote REST API (:4000) / MockClient.
 
 import 'dart:convert';
+import 'package:eis_client/eis_client.dart' as sp;
 import 'package:http/http.dart' as http;
 import '../core/bir/bir_eis_schema.dart';
 import '../core/bir/eis_engine_service.dart';
@@ -8,31 +10,50 @@ import '../core/bir/eis_local_runtime.dart';
 import '../core/bir/erp_connectors_service.dart';
 import '../models/ies_models.dart';
 
+// Gene - Nov, 20, 2026: Explicit backend transport selector for Local Embedded, Serverpod RPC, and Remote REST modes.
+enum EisBackendMode { embedded, serverpod, remoteRest }
+
 /// Unified client supporting the embedded local pure-Dart BIR EIS/CAS engine
-/// by default (standalone mobile/desktop/web) as well as REST / MockClient HTTP transport.
+/// by default (standalone mobile/desktop/web), Serverpod RPC (`eis_client`),
+/// and REST / MockClient HTTP transport.
 class IesApiClient {
   final String baseUrl;
   final bool useRemoteRest;
   // final Future<EisEngineService> Function()? _engineProvider;
   // Gene - Nov, 20, 2026: Use public field & initializing formal `this.engineProvider` to satisfy Dart 3.14+ prefer_initializing_formals lint.
   final Future<EisEngineService> Function()? engineProvider;
+  final sp.Client? serverpodClient;
   final http.Client? _httpClient;
 
   // IesApiClient({
   //   this.baseUrl = 'http://localhost:4000',
   //   this.useRemoteRest = false,
-  //   Future<EisEngineService> Function()? engineProvider,
+  //   this.engineProvider,
   //   http.Client? client,
-  // })  : _engineProvider = engineProvider,
-  //       _httpClient = client;
+  // }) : _httpClient = client;
   IesApiClient({
     this.baseUrl = 'http://localhost:4000',
     this.useRemoteRest = false,
     this.engineProvider,
+    this.serverpodClient,
     http.Client? client,
   }) : _httpClient = client;
 
-  bool get isEmbedded => !useRemoteRest && _httpClient == null;
+  // bool get isEmbedded => !useRemoteRest && _httpClient == null;
+  // Gene - Nov, 20, 2026: Distinguish Serverpod RPC, Embedded Local Engine, and Remote REST transport.
+  bool get isServerpod => serverpodClient != null && _httpClient == null;
+
+  bool get isEmbedded => !isServerpod && !useRemoteRest && _httpClient == null;
+
+  EisBackendMode get backendMode => isServerpod
+      ? EisBackendMode.serverpod
+      : (isEmbedded ? EisBackendMode.embedded : EisBackendMode.remoteRest);
+
+  String get modeChipLabel => switch (backendMode) {
+        EisBackendMode.embedded => 'Local Engine',
+        EisBackendMode.serverpod => 'Serverpod RPC',
+        EisBackendMode.remoteRest => 'REST API',
+      };
 
   String get connectionLabel => isEmbedded ? 'Local Embedded Engine' : baseUrl;
 
@@ -75,6 +96,14 @@ class IesApiClient {
   }
 
   Future<DashboardSummaryModel> fetchDashboard({String? taxpayerId}) async {
+    // Gene - Nov, 20, 2026: Route through Serverpod RPC when serverpodClient is active.
+    if (isServerpod) {
+      final raw =
+          await serverpodClient!.eis.getDashboardSummary(taxpayerId: taxpayerId);
+      return DashboardSummaryModel.fromJson(
+        jsonDecode(raw) as Map<String, dynamic>,
+      );
+    }
     if (isEmbedded) {
       final engine = await _getEngine();
       return DashboardSummaryModel.fromJson(
@@ -87,6 +116,13 @@ class IesApiClient {
   }
 
   Future<List<TaxpayerProfileModel>> fetchTaxpayers() async {
+    if (isServerpod) {
+      final raw = await serverpodClient!.eis.getTaxpayers();
+      final list = jsonDecode(raw) as List<dynamic>;
+      return list
+          .map((e) => TaxpayerProfileModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
     if (isEmbedded) {
       final engine = await _getEngine();
       return engine
@@ -105,6 +141,14 @@ class IesApiClient {
   }
 
   Future<List<StoredInvoiceModel>> fetchInvoices({String? taxpayerId}) async {
+    if (isServerpod) {
+      final raw =
+          await serverpodClient!.eis.getInvoices(taxpayerId: taxpayerId);
+      final list = jsonDecode(raw) as List<dynamic>;
+      return list
+          .map((e) => StoredInvoiceModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
     if (isEmbedded) {
       final engine = await _getEngine();
       return engine
@@ -120,6 +164,13 @@ class IesApiClient {
   }
 
   Future<void> updateGatewayConfig({String? mode, bool? simulateOutage}) async {
+    if (isServerpod) {
+      await serverpodClient!.eis.updateGatewayConfig(
+        mode: mode,
+        simulateOutage: simulateOutage,
+      );
+      return;
+    }
     if (isEmbedded) {
       final engine = await _getEngine();
       engine.setGatewayConfig(mode: mode, simulateOutage: simulateOutage);
@@ -132,6 +183,10 @@ class IesApiClient {
   }
 
   Future<Map<String, dynamic>> processRetryQueue() async {
+    if (isServerpod) {
+      final raw = await serverpodClient!.eis.processRetryQueue();
+      return jsonDecode(raw) as Map<String, dynamic>;
+    }
     if (isEmbedded) {
       final engine = await _getEngine();
       return await engine.processRetryQueue();
@@ -140,6 +195,13 @@ class IesApiClient {
   }
 
   Future<StoredInvoiceModel> createInvoice(Map<String, dynamic> payload) async {
+    if (isServerpod) {
+      final raw =
+          await serverpodClient!.eis.createInvoice(jsonEncode(payload));
+      return StoredInvoiceModel.fromJson(
+        jsonDecode(raw) as Map<String, dynamic>,
+      );
+    }
     if (isEmbedded) {
       final engine = await _getEngine();
       final forceInvalid = payload['forceInvalidPayload'] == true;
@@ -157,6 +219,15 @@ class IesApiClient {
     String invoiceId,
     String reason,
   ) async {
+    if (isServerpod) {
+      final raw = await serverpodClient!.eis.issueCreditMemo(
+        invoiceId,
+        reason: reason,
+      );
+      return StoredInvoiceModel.fromJson(
+        jsonDecode(raw) as Map<String, dynamic>,
+      );
+    }
     if (isEmbedded) {
       final engine = await _getEngine();
       final cm = await engine.issueCreditMemo(invoiceId, reason: reason);
@@ -173,6 +244,16 @@ class IesApiClient {
     Map<String, dynamic> payload, {
     String? taxpayerId,
   }) async {
+    if (isServerpod) {
+      final raw = await serverpodClient!.eis.syncConnector(
+        connector,
+        jsonEncode(payload),
+        taxpayerId: taxpayerId,
+      );
+      return StoredInvoiceModel.fromJson(
+        jsonDecode(raw) as Map<String, dynamic>,
+      );
+    }
     if (isEmbedded) {
       final engine = await _getEngine();
       final rec = switch (connector) {
@@ -191,6 +272,12 @@ class IesApiClient {
   }
 
   Future<int> importCsvBatch(String csv, {String? taxpayerId}) async {
+    if (isServerpod) {
+      return serverpodClient!.eis.importCsvBatch(
+        csv,
+        taxpayerId: taxpayerId,
+      );
+    }
     if (isEmbedded) {
       final engine = await _getEngine();
       final list =
@@ -208,6 +295,15 @@ class IesApiClient {
     String? taxpayerId,
     String bookType = 'ALL',
   }) async {
+    if (isServerpod) {
+      final raw = await serverpodClient!.eis.getCasBooks(
+        taxpayerId: taxpayerId,
+        bookType: bookType,
+      );
+      return CasBooksDataModel.fromJson(
+        jsonDecode(raw) as Map<String, dynamic>,
+      );
+    }
     if (isEmbedded) {
       final engine = await _getEngine();
       return CasBooksDataModel.fromJson(
@@ -227,6 +323,16 @@ class IesApiClient {
     required String kind,
     String period = '202611',
   }) async {
+    if (isServerpod) {
+      final raw = await serverpodClient!.eis.generateSlsp(
+        taxpayerId: taxpayerId,
+        kind: kind,
+        period: period,
+      );
+      return StatutoryReportModel.fromJson(
+        jsonDecode(raw) as Map<String, dynamic>,
+      );
+    }
     if (isEmbedded) {
       final engine = await _getEngine();
       return StatutoryReportModel.fromJson(
@@ -247,6 +353,16 @@ class IesApiClient {
     required String kind,
     String period = '202612',
   }) async {
+    if (isServerpod) {
+      final raw = await serverpodClient!.eis.generateWithholdingDat(
+        taxpayerId: taxpayerId,
+        kind: kind,
+        period: period,
+      );
+      return StatutoryReportModel.fromJson(
+        jsonDecode(raw) as Map<String, dynamic>,
+      );
+    }
     if (isEmbedded) {
       final engine = await _getEngine();
       return StatutoryReportModel.fromJson(
@@ -264,6 +380,10 @@ class IesApiClient {
   }
 
   Future<Map<String, dynamic>> fetchForm2307(String invoiceId) async {
+    if (isServerpod) {
+      final raw = await serverpodClient!.eis.generateForm2307(invoiceId);
+      return jsonDecode(raw) as Map<String, dynamic>;
+    }
     if (isEmbedded) {
       final engine = await _getEngine();
       return engine.generateForm2307ForInvoice(invoiceId);
@@ -272,6 +392,12 @@ class IesApiClient {
   }
 
   Future<AuditTrailResponseModel> fetchAuditTrail() async {
+    if (isServerpod) {
+      final raw = await serverpodClient!.eis.getAuditTrail();
+      return AuditTrailResponseModel.fromJson(
+        jsonDecode(raw) as Map<String, dynamic>,
+      );
+    }
     if (isEmbedded) {
       final engine = await _getEngine();
       return AuditTrailResponseModel.fromJson({
@@ -288,6 +414,10 @@ class IesApiClient {
   }
 
   Future<void> registerTaxpayer(Map<String, dynamic> body) async {
+    if (isServerpod) {
+      await serverpodClient!.eis.registerTaxpayer(jsonEncode(body));
+      return;
+    }
     if (isEmbedded) {
       final engine = await _getEngine();
       engine.registerTaxpayer(
@@ -309,6 +439,10 @@ class IesApiClient {
   }
 
   Future<void> rotateTaxpayerKeys(String taxpayerId) async {
+    if (isServerpod) {
+      await serverpodClient!.eis.rotateTaxpayerKeys(taxpayerId);
+      return;
+    }
     if (isEmbedded) {
       final engine = await _getEngine();
       engine.rotateTaxpayerKeys(taxpayerId);

@@ -1,5 +1,8 @@
 // Gene - Nov, 20, 2026: Standalone Philippine BIR EIS v2.01 & CAS Flutter application with embedded pure-Dart compliance engine and optional Remote REST API mode.
+// Gene - Nov, 20, 2026: Added 3-mode backend support (Local Embedded Engine, Serverpod RPC :8080, and Remote REST API :4000).
+import 'package:eis_client/eis_client.dart' as sp;
 import 'package:material_ui/material_ui.dart';
+import 'package:serverpod_flutter/serverpod_flutter.dart';
 import 'models/ies_models.dart';
 import 'screens/cas_books_screen.dart';
 import 'screens/command_center_screen.dart';
@@ -10,12 +13,36 @@ import 'screens/vault_audit_screen.dart';
 import 'services/ies_api_client.dart';
 
 const _envRestUrl = String.fromEnvironment('EIS_REST_URL');
+const _envServerpodUrl = String.fromEnvironment('EIS_SERVERPOD_URL');
 
+// Gene - Nov, 20, 2026: Build a Serverpod RPC IesApiClient with Android Emulator localhost mapping and trailing slash normalization.
+IesApiClient buildServerpodApiClient(String rawUrl) {
+  final trimmed = rawUrl.trim().isEmpty ? 'http://localhost:8080' : rawUrl.trim();
+  final resolved = trimmed.replaceFirst('://localhost', '://$localhost');
+  final normalized = resolved.endsWith('/') ? resolved : '$resolved/';
+  final client = sp.Client(normalized)
+    ..connectivityMonitor = FlutterConnectivityMonitor();
+  return IesApiClient(baseUrl: normalized, serverpodClient: client);
+}
+
+// void main() {
+//   WidgetsFlutterBinding.ensureInitialized();
+//   final initialClient = _envRestUrl.isNotEmpty
+//       ? IesApiClient(baseUrl: _envRestUrl, useRemoteRest: true)
+//       : IesApiClient();
+//
+//   runApp(IesApp(apiClient: initialClient));
+// }
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  final initialClient = _envRestUrl.isNotEmpty
-      ? IesApiClient(baseUrl: _envRestUrl, useRemoteRest: true)
-      : IesApiClient();
+  final IesApiClient initialClient;
+  if (_envServerpodUrl.isNotEmpty) {
+    initialClient = buildServerpodApiClient(_envServerpodUrl);
+  } else if (_envRestUrl.isNotEmpty) {
+    initialClient = IesApiClient(baseUrl: _envRestUrl, useRemoteRest: true);
+  } else {
+    initialClient = IesApiClient();
+  }
 
   runApp(IesApp(apiClient: initialClient));
 }
@@ -194,13 +221,30 @@ class _IesHomeShellState extends State<IesHomeShell> {
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 8),
+            // child: ActionChip(
+            //   avatar: Icon(
+            //     _api.isEmbedded ? Icons.memory_rounded : Icons.cloud_outlined,
+            //     size: 16,
+            //   ),
+            //   label: Text(
+            //     _api.isEmbedded ? 'Local Engine' : 'REST API',
+            //     style: const TextStyle(fontSize: 12),
+            //   ),
+            //   tooltip: 'Backend Mode (${_api.connectionLabel})',
+            //   onPressed: _openBackendModeDialog,
+            // ),
+            // Gene - Nov, 20, 2026: Display 3-mode icon and label (Local Engine / Serverpod RPC / REST API).
             child: ActionChip(
               avatar: Icon(
-                _api.isEmbedded ? Icons.memory_rounded : Icons.cloud_outlined,
+                switch (_api.backendMode) {
+                  EisBackendMode.embedded => Icons.memory_rounded,
+                  EisBackendMode.serverpod => Icons.dns_rounded,
+                  EisBackendMode.remoteRest => Icons.cloud_outlined,
+                },
                 size: 16,
               ),
               label: Text(
-                _api.isEmbedded ? 'Local Engine' : 'REST API',
+                _api.modeChipLabel,
                 style: const TextStyle(fontSize: 12),
               ),
               tooltip: 'Backend Mode (${_api.connectionLabel})',
@@ -385,18 +429,115 @@ class _BackendModeDialog extends StatefulWidget {
   State<_BackendModeDialog> createState() => _BackendModeDialogState();
 }
 
+// class _BackendModeDialogState extends State<_BackendModeDialog> {
+//   late bool _useRemoteRest;
+//   late final TextEditingController _urlCtrl;
+//
+//   @override
+//   void initState() {
+//     super.initState();
+//     _useRemoteRest = widget.currentClient.useRemoteRest;
+//     _urlCtrl = TextEditingController(
+//       text: widget.currentClient.baseUrl.isNotEmpty
+//           ? widget.currentClient.baseUrl
+//           : 'http://localhost:4000',
+//     );
+//   }
+//
+//   @override
+//   void dispose() {
+//     _urlCtrl.dispose();
+//     super.dispose();
+//   }
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     return AlertDialog(
+//       title: const Text('Backend Execution Mode'),
+//       content: SizedBox(
+//         width: 440,
+//         child: Column(
+//           mainAxisSize: MainAxisSize.min,
+//           crossAxisAlignment: CrossAxisAlignment.start,
+//           children: [
+//             SegmentedButton<bool>(
+//               segments: const [
+//                 ButtonSegment(
+//                   value: false,
+//                   label: Text('Embedded Local Engine'),
+//                   icon: Icon(Icons.memory_rounded),
+//                 ),
+//                 ButtonSegment(
+//                   value: true,
+//                   label: Text('Remote REST API'),
+//                   icon: Icon(Icons.cloud_outlined),
+//                 ),
+//               ],
+//               selected: {_useRemoteRest},
+//               onSelectionChanged: (sel) {
+//                 setState(() => _useRemoteRest = sel.first);
+//               },
+//             ),
+//             const SizedBox(height: 14),
+//             if (!_useRemoteRest)
+//               Text(
+//                 'Runs the full pure-Dart BIR EIS v2.01 (RSA-2048 JWS, AES-256-GCM, EOPT, 6 CAS Books, .DAT/2307 & Annex B Hash Chain) directly inside this Flutter app.',
+//                 style: Theme.of(context).textTheme.bodySmall,
+//               )
+//             else ...[
+//               TextField(
+//                 controller: _urlCtrl,
+//                 decoration: const InputDecoration(
+//                   labelText: 'REST Bridge Base URL',
+//                   hintText: 'http://localhost:4000',
+//                   border: OutlineInputBorder(),
+//                 ),
+//               ),
+//               const SizedBox(height: 8),
+//               Text(
+//                 'Tip: On Android Emulator use http://10.0.2.2:4000 to reach a local eis_server REST bridge.',
+//                 style: Theme.of(context).textTheme.bodySmall,
+//               ),
+//             ],
+//           ],
+//         ),
+//       ),
+//       actions: [
+//         TextButton(
+//           onPressed: () => Navigator.of(context).pop(),
+//           child: const Text('Cancel'),
+//         ),
+//         FilledButton(
+//           onPressed: () {
+//             final url = _urlCtrl.text.trim().isEmpty
+//                 ? 'http://localhost:4000'
+//                 : _urlCtrl.text.trim();
+//             Navigator.of(context).pop(
+//               IesApiClient(baseUrl: url, useRemoteRest: _useRemoteRest),
+//             );
+//           },
+//           child: const Text('Apply'),
+//         ),
+//       ],
+//     );
+//   }
+// }
+// Gene - Nov, 20, 2026: 3-mode backend switcher dialog supporting Local Embedded Engine, Serverpod RPC (:8080), and Remote REST (:4000).
 class _BackendModeDialogState extends State<_BackendModeDialog> {
-  late bool _useRemoteRest;
+  late EisBackendMode _mode;
   late final TextEditingController _urlCtrl;
 
   @override
   void initState() {
     super.initState();
-    _useRemoteRest = widget.currentClient.useRemoteRest;
+    _mode = widget.currentClient.backendMode;
+    final currentUrl = widget.currentClient.baseUrl.trim();
     _urlCtrl = TextEditingController(
-      text: widget.currentClient.baseUrl.isNotEmpty
-          ? widget.currentClient.baseUrl
-          : 'http://localhost:4000',
+      text: currentUrl.isNotEmpty
+          ? currentUrl
+          : (_mode == EisBackendMode.serverpod
+              ? 'http://localhost:8080/'
+              : 'http://localhost:4000'),
     );
   }
 
@@ -406,41 +547,72 @@ class _BackendModeDialogState extends State<_BackendModeDialog> {
     super.dispose();
   }
 
+  void _onModeChanged(EisBackendMode nextMode) {
+    setState(() {
+      _mode = nextMode;
+      final current = _urlCtrl.text.trim();
+      if (nextMode == EisBackendMode.serverpod &&
+          (current.isEmpty || current.contains(':4000'))) {
+        _urlCtrl.text = 'http://localhost:8080/';
+      } else if (nextMode == EisBackendMode.remoteRest &&
+          (current.isEmpty || current.contains(':8080'))) {
+        _urlCtrl.text = 'http://localhost:4000';
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Backend Execution Mode'),
       content: SizedBox(
-        width: 440,
+        width: 480,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SegmentedButton<bool>(
+            SegmentedButton<EisBackendMode>(
               segments: const [
                 ButtonSegment(
-                  value: false,
-                  label: Text('Embedded Local Engine'),
+                  value: EisBackendMode.embedded,
+                  label: Text('Local'),
                   icon: Icon(Icons.memory_rounded),
                 ),
                 ButtonSegment(
-                  value: true,
-                  label: Text('Remote REST API'),
+                  value: EisBackendMode.serverpod,
+                  label: Text('Serverpod'),
+                  icon: Icon(Icons.dns_rounded),
+                ),
+                ButtonSegment(
+                  value: EisBackendMode.remoteRest,
+                  label: Text('REST'),
                   icon: Icon(Icons.cloud_outlined),
                 ),
               ],
-              selected: {_useRemoteRest},
-              onSelectionChanged: (sel) {
-                setState(() => _useRemoteRest = sel.first);
-              },
+              selected: {_mode},
+              onSelectionChanged: (sel) => _onModeChanged(sel.first),
             ),
             const SizedBox(height: 14),
-            if (!_useRemoteRest)
+            if (_mode == EisBackendMode.embedded)
               Text(
                 'Runs the full pure-Dart BIR EIS v2.01 (RSA-2048 JWS, AES-256-GCM, EOPT, 6 CAS Books, .DAT/2307 & Annex B Hash Chain) directly inside this Flutter app.',
                 style: Theme.of(context).textTheme.bodySmall,
               )
-            else ...[
+            else if (_mode == EisBackendMode.serverpod) ...[
+              TextField(
+                controller: _urlCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Serverpod RPC URL',
+                  hintText: 'http://localhost:8080/',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Start backend: cd server/eis_server && dart bin/main.dart (localhost auto-maps to 10.0.2.2 on Android Emulator).',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ] else ...[
               TextField(
                 controller: _urlCtrl,
                 decoration: const InputDecoration(
@@ -465,11 +637,19 @@ class _BackendModeDialogState extends State<_BackendModeDialog> {
         ),
         FilledButton(
           onPressed: () {
+            if (_mode == EisBackendMode.embedded) {
+              Navigator.of(context).pop(IesApiClient());
+              return;
+            }
+            if (_mode == EisBackendMode.serverpod) {
+              Navigator.of(context).pop(buildServerpodApiClient(_urlCtrl.text));
+              return;
+            }
             final url = _urlCtrl.text.trim().isEmpty
                 ? 'http://localhost:4000'
                 : _urlCtrl.text.trim();
             Navigator.of(context).pop(
-              IesApiClient(baseUrl: url, useRemoteRest: _useRemoteRest),
+              IesApiClient(baseUrl: url, useRemoteRest: true),
             );
           },
           child: const Text('Apply'),

@@ -1,11 +1,17 @@
 // Gene - Nov, 20, 2026: Ported pure-Dart BIR EIS v2.01 & CAS engine test suite from eis and added local JSON persistence roundtrip verification.
 import 'dart:convert';
 import 'dart:io';
-import 'package:eis_v2/core/bir/bir_eis_schema.dart';
-import 'package:eis_v2/core/bir/crypto_jws_aes_service.dart';
-import 'package:eis_v2/core/bir/eis_engine_service.dart';
-import 'package:eis_v2/core/bir/erp_connectors_service.dart';
-import 'package:eis_v2/core/bir/tax_calculator_service.dart';
+// import 'package:eis_v2/core/bir/bir_eis_schema.dart';
+// import 'package:eis_v2/core/bir/crypto_jws_aes_service.dart';
+// import 'package:eis_v2/core/bir/eis_engine_service.dart';
+// import 'package:eis_v2/core/bir/erp_connectors_service.dart';
+// import 'package:eis_v2/core/bir/tax_calculator_service.dart';
+// Gene - Nov, 20, 2026: Updated package imports from eis_v2 to eis.
+import 'package:eis/core/bir/bir_eis_schema.dart';
+import 'package:eis/core/bir/crypto_jws_aes_service.dart';
+import 'package:eis/core/bir/eis_engine_service.dart';
+import 'package:eis/core/bir/erp_connectors_service.dart';
+import 'package:eis/core/bir/tax_calculator_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 EisEngineService _createTestEngine({String? persistPath}) {
@@ -349,7 +355,9 @@ void main() {
     test(
         'persists taxpayers, sequence counters, invoices, CAS books, and Annex B audit trail to JSON and reloads cleanly',
         () async {
-      final tempDir = Directory.systemTemp.createTempSync('eis_v2_store_test_');
+      // final tempDir = Directory.systemTemp.createTempSync('eis_v2_store_test_');
+      // Gene - Nov, 20, 2026: Renamed temp test prefix from eis_v2_store_test_ to eis_store_test_.
+      final tempDir = Directory.systemTemp.createTempSync('eis_store_test_');
       addTearDown(() {
         if (tempDir.existsSync()) {
           tempDir.deleteSync(recursive: true);
