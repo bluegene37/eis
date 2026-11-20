@@ -8,29 +8,43 @@
 // ignore_for_file: type_literal_in_constant_pattern
 // ignore_for_file: use_super_parameters
 // ignore_for_file: invalid_use_of_internal_member
+// ignore_for_file: dead_code, unnecessary_type_check
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'package:serverpod/serverpod.dart' as _i1;
-import 'package:serverpod/protocol.dart' as _i2;
-import 'greetings/greeting.dart' as _i3;
+import 'package:serverpod/protocol.dart' as _isp;
+import 'package:serverpod/serverpod.dart' as _is;
+import 'greetings/greeting.dart' as _izw8z7ou;
 export 'greetings/greeting.dart';
 
-class Protocol extends _i1.SerializationManagerServer {
+class Protocol extends _is.DatabaseSerializationManager
+    implements _is.DatabaseProtocolDeserializationProvider {
   Protocol._();
 
   factory Protocol() => _instance;
 
   static final Protocol _instance = Protocol._();
 
-  static final List<_i2.TableDefinition> targetTableDefinitions = [
-    ..._i2.Protocol.targetTableDefinitions,
+  @override
+  _is.ProtocolDeserialization get deserializationMetadata =>
+      _is.ProtocolDeserialization.cached(
+        this,
+        types: const [
+          _is.getType<_izw8z7ou.Greeting>,
+          _is.getType<_izw8z7ou.Greeting?>,
+        ],
+        modules: const [_isp.Protocol.new],
+        classNames: const ['Greeting'],
+      );
+
+  static List<_isp.TableDefinition> get targetTableDefinitions => [
+    ..._ownTableDefinitions,
+    ..._isp.Protocol.targetTableDefinitions,
   ];
 
-  static String? getClassNameFromObjectJson(dynamic data) {
-    if (data is! Map) return null;
-    final className = data['__className__'] as String?;
-    return className;
-  }
+  static List<_isp.TableDefinition> get _ownTableDefinitions => [];
+
+  static String? getClassNameFromObjectJson(dynamic data) =>
+      _is.ProtocolDeserialization.readClassName(data);
 
   @override
   T deserialize<T>(
@@ -38,36 +52,43 @@ class Protocol extends _i1.SerializationManagerServer {
     Type? t,
   ]) {
     t ??= T;
-
-    final dataClassName = getClassNameFromObjectJson(data);
+    final rawDataClassName = _is.ProtocolDeserialization.readClassName(data);
+    final dataClassName = rawDataClassName;
     if (dataClassName != null && dataClassName != getClassNameForType(t)) {
       try {
         return deserializeByClassName({
           'className': dataClassName,
           'data': data,
         });
-      } on FormatException catch (_) {
+      } on _is.DeserializationClassNameNotFoundException catch (_) {
         // If the className is not recognized (e.g., older client receiving
         // data with a new subtype), fall back to deserializing without the
         // className, using the expected type T.
       }
     }
 
-    if (t == _i3.Greeting) {
-      return _i3.Greeting.fromJson(data) as T;
+    if (t == _izw8z7ou.Greeting) {
+      return _izw8z7ou.Greeting.fromJson(data) as T;
     }
-    if (t == _i1.getType<_i3.Greeting?>()) {
-      return (data != null ? _i3.Greeting.fromJson(data) : null) as T;
+    if (t == _is.getType<_izw8z7ou.Greeting?>()) {
+      return (data != null ? _izw8z7ou.Greeting.fromJson(data) : null) as T;
     }
-    try {
-      return _i2.Protocol().deserialize<T>(data, t);
-    } on _i1.DeserializationTypeNotFoundException catch (_) {}
+    final modules = deserializationMetadata.modulesForDeserialization(
+      t,
+      className: rawDataClassName,
+    );
+    for (final module in modules) {
+      try {
+        return module.deserialize<T>(data, t);
+      } on _is.DeserializationTypeNotFoundException catch (_) {}
+    }
+
     return super.deserialize<T>(data, t);
   }
 
   static String? getClassNameForType(Type type) {
     return switch (type) {
-      _i3.Greeting => 'Greeting',
+      _izw8z7ou.Greeting => 'Greeting',
       _ => null,
     };
   }
@@ -82,12 +103,12 @@ class Protocol extends _i1.SerializationManagerServer {
     }
 
     switch (data) {
-      case _i3.Greeting():
+      case _izw8z7ou.Greeting():
         return 'Greeting';
     }
-    className = _i2.Protocol().getClassNameForObject(data);
+    className = _isp.Protocol().getClassNameForObject(data);
     if (className != null) {
-      return 'serverpod.$className';
+      return className.contains('.') ? className : 'serverpod.$className';
     }
     return null;
   }
@@ -99,19 +120,21 @@ class Protocol extends _i1.SerializationManagerServer {
       return super.deserializeByClassName(data);
     }
     if (dataClassName == 'Greeting') {
-      return deserialize<_i3.Greeting>(data['data']);
+      return deserialize<_izw8z7ou.Greeting>(data['data']);
     }
     if (dataClassName.startsWith('serverpod.')) {
-      data['className'] = dataClassName.substring(10);
-      return _i2.Protocol().deserializeByClassName(data);
+      return _isp.Protocol().deserializeByClassName({
+        ...data,
+        'className': dataClassName.substring(10),
+      });
     }
     return super.deserializeByClassName(data);
   }
 
   @override
-  _i1.Table? getTableForType(Type t) {
+  _is.Table? getTableForType(Type t) {
     {
-      var table = _i2.Protocol().getTableForType(t);
+      var table = _isp.Protocol().getTableForType(t);
       if (table != null) {
         return table;
       }
@@ -120,8 +143,11 @@ class Protocol extends _i1.SerializationManagerServer {
   }
 
   @override
-  List<_i2.TableDefinition> getTargetTableDefinitions() =>
+  List<_isp.TableDefinition> getTargetTableDefinitions() =>
       targetTableDefinitions;
+
+  @override
+  List<_isp.TableDefinition> getOwnTableDefinitions() => _ownTableDefinitions;
 
   @override
   String getModuleName() => 'eis';
@@ -136,7 +162,7 @@ class Protocol extends _i1.SerializationManagerServer {
       return null;
     }
     try {
-      return _i2.Protocol().mapRecordToJson(record);
+      return _isp.Protocol().mapRecordToJson(record);
     } catch (_) {}
     throw Exception('Unsupported record type ${record.runtimeType}');
   }

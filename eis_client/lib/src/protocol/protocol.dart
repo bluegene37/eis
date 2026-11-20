@@ -8,25 +8,36 @@
 // ignore_for_file: type_literal_in_constant_pattern
 // ignore_for_file: use_super_parameters
 // ignore_for_file: invalid_use_of_internal_member
+// ignore_for_file: dead_code, unnecessary_type_check
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'package:serverpod_client/serverpod_client.dart' as _i1;
-import 'greetings/greeting.dart' as _i2;
+import 'package:serverpod_client/serverpod_client.dart' as _isc;
+import 'greetings/greeting.dart' as _izw8z7ou;
 export 'greetings/greeting.dart';
 export 'client.dart';
 
-class Protocol extends _i1.SerializationManager {
+class Protocol extends _isc.SerializationManager
+    implements _isc.ProtocolDeserializationProvider {
   Protocol._();
 
   factory Protocol() => _instance;
 
   static final Protocol _instance = Protocol._();
 
-  static String? getClassNameFromObjectJson(dynamic data) {
-    if (data is! Map) return null;
-    final className = data['__className__'] as String?;
-    return className;
-  }
+  @override
+  _isc.ProtocolDeserialization get deserializationMetadata =>
+      _isc.ProtocolDeserialization.cached(
+        this,
+        types: const [
+          _isc.getType<_izw8z7ou.Greeting>,
+          _isc.getType<_izw8z7ou.Greeting?>,
+        ],
+        modules: const [],
+        classNames: const ['Greeting'],
+      );
+
+  static String? getClassNameFromObjectJson(dynamic data) =>
+      _isc.ProtocolDeserialization.readClassName(data);
 
   @override
   T deserialize<T>(
@@ -34,33 +45,33 @@ class Protocol extends _i1.SerializationManager {
     Type? t,
   ]) {
     t ??= T;
-
-    final dataClassName = getClassNameFromObjectJson(data);
+    final rawDataClassName = _isc.ProtocolDeserialization.readClassName(data);
+    final dataClassName = rawDataClassName;
     if (dataClassName != null && dataClassName != getClassNameForType(t)) {
       try {
         return deserializeByClassName({
           'className': dataClassName,
           'data': data,
         });
-      } on FormatException catch (_) {
+      } on _isc.DeserializationClassNameNotFoundException catch (_) {
         // If the className is not recognized (e.g., older client receiving
         // data with a new subtype), fall back to deserializing without the
         // className, using the expected type T.
       }
     }
 
-    if (t == _i2.Greeting) {
-      return _i2.Greeting.fromJson(data) as T;
+    if (t == _izw8z7ou.Greeting) {
+      return _izw8z7ou.Greeting.fromJson(data) as T;
     }
-    if (t == _i1.getType<_i2.Greeting?>()) {
-      return (data != null ? _i2.Greeting.fromJson(data) : null) as T;
+    if (t == _isc.getType<_izw8z7ou.Greeting?>()) {
+      return (data != null ? _izw8z7ou.Greeting.fromJson(data) : null) as T;
     }
     return super.deserialize<T>(data, t);
   }
 
   static String? getClassNameForType(Type type) {
     return switch (type) {
-      _i2.Greeting => 'Greeting',
+      _izw8z7ou.Greeting => 'Greeting',
       _ => null,
     };
   }
@@ -75,7 +86,7 @@ class Protocol extends _i1.SerializationManager {
     }
 
     switch (data) {
-      case _i2.Greeting():
+      case _izw8z7ou.Greeting():
         return 'Greeting';
     }
     return null;
@@ -88,10 +99,13 @@ class Protocol extends _i1.SerializationManager {
       return super.deserializeByClassName(data);
     }
     if (dataClassName == 'Greeting') {
-      return deserialize<_i2.Greeting>(data['data']);
+      return deserialize<_izw8z7ou.Greeting>(data['data']);
     }
     return super.deserializeByClassName(data);
   }
+
+  @override
+  String getModuleName() => 'eis';
 
   /// Maps any `Record`s known to this [Protocol] to their JSON representation
   ///

@@ -7,15 +7,24 @@ import '../models/ies_models.dart';
 /// as well as REST / MockClient HTTP transport for tests and webhooks.
 class IesApiClient {
   final String baseUrl;
-  final sp.Client? _serverpodClient;
+  // final sp.Client? _serverpodClient;
+  // Gene - Nov, 20, 2026: Use initializing formal `this.serverpodClient` to satisfy Dart 3.12+ prefer_initializing_formals lint.
+  final sp.Client? serverpodClient;
   final http.Client? _httpClient;
 
+  // IesApiClient({
+  //   this.baseUrl = 'http://localhost:8080/',
+  //   sp.Client? serverpodClient,
+  //   http.Client? client,
+  // })  : _serverpodClient = serverpodClient,
+  //       _httpClient = client;
   IesApiClient({
     this.baseUrl = 'http://localhost:8080/',
-    sp.Client? serverpodClient,
+    this.serverpodClient,
     http.Client? client,
-  })  : _serverpodClient = serverpodClient,
-        _httpClient = client;
+  }) : _httpClient = client;
+
+  sp.Client? get _serverpodClient => serverpodClient;
 
   http.Client get _http => _httpClient ?? http.Client();
 

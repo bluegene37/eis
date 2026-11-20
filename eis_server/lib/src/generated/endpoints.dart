@@ -10,382 +10,397 @@
 // ignore_for_file: invalid_use_of_internal_member
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'package:serverpod/serverpod.dart' as _i1;
-import '../endpoints/eis_endpoint.dart' as _i2;
-import '../greetings/greeting_endpoint.dart' as _i3;
+import 'package:serverpod/serverpod.dart' as _is;
+import '../endpoints/eis_endpoint.dart' as _i6oenk0g;
+import '../greetings/greeting_endpoint.dart' as _il624ik7;
 
-class Endpoints extends _i1.EndpointDispatch {
+class Endpoints extends _is.EndpointDispatch {
   @override
-  void initializeEndpoints(_i1.Server server) {
-    var endpoints = <String, _i1.Endpoint>{
-      'eis': _i2.EisEndpoint()
+  void initializeEndpoints(_is.Server server) {
+    initializeOwnEndpoints(server);
+  }
+
+  @override
+  void initializeOwnEndpoints(_is.Server server) {
+    var endpoints = <String, _is.Endpoint>{
+      'eis': _i6oenk0g.EisEndpoint()
         ..initialize(
           server,
           'eis',
           null,
         ),
-      'greeting': _i3.GreetingEndpoint()
+      'greeting': _il624ik7.GreetingEndpoint()
         ..initialize(
           server,
           'greeting',
           null,
         ),
     };
-    connectors['eis'] = _i1.EndpointConnector(
+    connectors['eis'] = _is.EndpointConnector(
       name: 'eis',
       endpoint: endpoints['eis']!,
       methodConnectors: {
-        'getDashboardSummary': _i1.MethodConnector(
+        'getDashboardSummary': _is.MethodConnector(
           name: 'getDashboardSummary',
           params: {
-            'taxpayerId': _i1.ParameterDescription(
+            'taxpayerId': _is.ParameterDescription(
               name: 'taxpayerId',
-              type: _i1.getType<String?>(),
+              type: _is.getType<String?>(),
               nullable: true,
             ),
           },
           call:
               (
-                _i1.Session session,
+                _is.Session session,
                 Map<String, dynamic> params,
-              ) async =>
-                  (endpoints['eis'] as _i2.EisEndpoint).getDashboardSummary(
+              ) async => (endpoints['eis'] as _i6oenk0g.EisEndpoint)
+                  .getDashboardSummary(
                     session,
                     taxpayerId: params['taxpayerId'],
                   ),
         ),
-        'updateGatewayConfig': _i1.MethodConnector(
+        'updateGatewayConfig': _is.MethodConnector(
           name: 'updateGatewayConfig',
           params: {
-            'mode': _i1.ParameterDescription(
+            'mode': _is.ParameterDescription(
               name: 'mode',
-              type: _i1.getType<String?>(),
+              type: _is.getType<String?>(),
               nullable: true,
             ),
-            'simulateOutage': _i1.ParameterDescription(
+            'simulateOutage': _is.ParameterDescription(
               name: 'simulateOutage',
-              type: _i1.getType<bool?>(),
+              type: _is.getType<bool?>(),
               nullable: true,
             ),
           },
           call:
               (
-                _i1.Session session,
+                _is.Session session,
                 Map<String, dynamic> params,
-              ) async =>
-                  (endpoints['eis'] as _i2.EisEndpoint).updateGatewayConfig(
+              ) async => (endpoints['eis'] as _i6oenk0g.EisEndpoint)
+                  .updateGatewayConfig(
                     session,
                     mode: params['mode'],
                     simulateOutage: params['simulateOutage'],
                   ),
         ),
-        'getTaxpayers': _i1.MethodConnector(
+        'getTaxpayers': _is.MethodConnector(
           name: 'getTaxpayers',
           params: {},
           call:
               (
-                _i1.Session session,
+                _is.Session session,
                 Map<String, dynamic> params,
-              ) async =>
-                  (endpoints['eis'] as _i2.EisEndpoint).getTaxpayers(session),
+              ) async => (endpoints['eis'] as _i6oenk0g.EisEndpoint)
+                  .getTaxpayers(session),
         ),
-        'registerTaxpayer': _i1.MethodConnector(
+        'registerTaxpayer': _is.MethodConnector(
           name: 'registerTaxpayer',
           params: {
-            'bodyJson': _i1.ParameterDescription(
+            'bodyJson': _is.ParameterDescription(
               name: 'bodyJson',
-              type: _i1.getType<String>(),
+              type: _is.getType<String>(),
               nullable: false,
             ),
           },
           call:
               (
-                _i1.Session session,
-                Map<String, dynamic> params,
-              ) async => (endpoints['eis'] as _i2.EisEndpoint).registerTaxpayer(
-                session,
-                params['bodyJson'],
-              ),
-        ),
-        'rotateTaxpayerKeys': _i1.MethodConnector(
-          name: 'rotateTaxpayerKeys',
-          params: {
-            'taxpayerId': _i1.ParameterDescription(
-              name: 'taxpayerId',
-              type: _i1.getType<String>(),
-              nullable: false,
-            ),
-          },
-          call:
-              (
-                _i1.Session session,
+                _is.Session session,
                 Map<String, dynamic> params,
               ) async =>
-                  (endpoints['eis'] as _i2.EisEndpoint).rotateTaxpayerKeys(
+                  (endpoints['eis'] as _i6oenk0g.EisEndpoint).registerTaxpayer(
+                    session,
+                    params['bodyJson'],
+                  ),
+        ),
+        'rotateTaxpayerKeys': _is.MethodConnector(
+          name: 'rotateTaxpayerKeys',
+          params: {
+            'taxpayerId': _is.ParameterDescription(
+              name: 'taxpayerId',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _is.Session session,
+                Map<String, dynamic> params,
+              ) async => (endpoints['eis'] as _i6oenk0g.EisEndpoint)
+                  .rotateTaxpayerKeys(
                     session,
                     params['taxpayerId'],
                   ),
         ),
-        'getInvoices': _i1.MethodConnector(
+        'getInvoices': _is.MethodConnector(
           name: 'getInvoices',
           params: {
-            'taxpayerId': _i1.ParameterDescription(
+            'taxpayerId': _is.ParameterDescription(
               name: 'taxpayerId',
-              type: _i1.getType<String?>(),
+              type: _is.getType<String?>(),
               nullable: true,
             ),
           },
           call:
               (
-                _i1.Session session,
+                _is.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['eis'] as _i2.EisEndpoint).getInvoices(
-                session,
-                taxpayerId: params['taxpayerId'],
-              ),
+              ) async =>
+                  (endpoints['eis'] as _i6oenk0g.EisEndpoint).getInvoices(
+                    session,
+                    taxpayerId: params['taxpayerId'],
+                  ),
         ),
-        'createInvoice': _i1.MethodConnector(
+        'createInvoice': _is.MethodConnector(
           name: 'createInvoice',
           params: {
-            'payloadJson': _i1.ParameterDescription(
+            'payloadJson': _is.ParameterDescription(
               name: 'payloadJson',
-              type: _i1.getType<String>(),
+              type: _is.getType<String>(),
               nullable: false,
             ),
           },
           call:
               (
-                _i1.Session session,
+                _is.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['eis'] as _i2.EisEndpoint).createInvoice(
-                session,
-                params['payloadJson'],
-              ),
+              ) async =>
+                  (endpoints['eis'] as _i6oenk0g.EisEndpoint).createInvoice(
+                    session,
+                    params['payloadJson'],
+                  ),
         ),
-        'processRetryQueue': _i1.MethodConnector(
+        'processRetryQueue': _is.MethodConnector(
           name: 'processRetryQueue',
           params: {},
           call:
               (
-                _i1.Session session,
+                _is.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['eis'] as _i2.EisEndpoint)
+              ) async => (endpoints['eis'] as _i6oenk0g.EisEndpoint)
                   .processRetryQueue(session),
         ),
-        'issueCreditMemo': _i1.MethodConnector(
+        'issueCreditMemo': _is.MethodConnector(
           name: 'issueCreditMemo',
           params: {
-            'invoiceId': _i1.ParameterDescription(
+            'invoiceId': _is.ParameterDescription(
               name: 'invoiceId',
-              type: _i1.getType<String>(),
+              type: _is.getType<String>(),
               nullable: false,
             ),
-            'reason': _i1.ParameterDescription(
+            'reason': _is.ParameterDescription(
               name: 'reason',
-              type: _i1.getType<String>(),
+              type: _is.getType<String>(),
               nullable: false,
             ),
           },
           call:
               (
-                _i1.Session session,
-                Map<String, dynamic> params,
-              ) async => (endpoints['eis'] as _i2.EisEndpoint).issueCreditMemo(
-                session,
-                params['invoiceId'],
-                reason: params['reason'],
-              ),
-        ),
-        'syncConnector': _i1.MethodConnector(
-          name: 'syncConnector',
-          params: {
-            'connector': _i1.ParameterDescription(
-              name: 'connector',
-              type: _i1.getType<String>(),
-              nullable: false,
-            ),
-            'payloadJson': _i1.ParameterDescription(
-              name: 'payloadJson',
-              type: _i1.getType<String>(),
-              nullable: false,
-            ),
-            'taxpayerId': _i1.ParameterDescription(
-              name: 'taxpayerId',
-              type: _i1.getType<String?>(),
-              nullable: true,
-            ),
-          },
-          call:
-              (
-                _i1.Session session,
-                Map<String, dynamic> params,
-              ) async => (endpoints['eis'] as _i2.EisEndpoint).syncConnector(
-                session,
-                params['connector'],
-                params['payloadJson'],
-                taxpayerId: params['taxpayerId'],
-              ),
-        ),
-        'importCsvBatch': _i1.MethodConnector(
-          name: 'importCsvBatch',
-          params: {
-            'csvText': _i1.ParameterDescription(
-              name: 'csvText',
-              type: _i1.getType<String>(),
-              nullable: false,
-            ),
-            'taxpayerId': _i1.ParameterDescription(
-              name: 'taxpayerId',
-              type: _i1.getType<String?>(),
-              nullable: true,
-            ),
-          },
-          call:
-              (
-                _i1.Session session,
-                Map<String, dynamic> params,
-              ) async => (endpoints['eis'] as _i2.EisEndpoint).importCsvBatch(
-                session,
-                params['csvText'],
-                taxpayerId: params['taxpayerId'],
-              ),
-        ),
-        'getCasBooks': _i1.MethodConnector(
-          name: 'getCasBooks',
-          params: {
-            'taxpayerId': _i1.ParameterDescription(
-              name: 'taxpayerId',
-              type: _i1.getType<String?>(),
-              nullable: true,
-            ),
-            'bookType': _i1.ParameterDescription(
-              name: 'bookType',
-              type: _i1.getType<String>(),
-              nullable: false,
-            ),
-          },
-          call:
-              (
-                _i1.Session session,
-                Map<String, dynamic> params,
-              ) async => (endpoints['eis'] as _i2.EisEndpoint).getCasBooks(
-                session,
-                taxpayerId: params['taxpayerId'],
-                bookType: params['bookType'],
-              ),
-        ),
-        'generateSlsp': _i1.MethodConnector(
-          name: 'generateSlsp',
-          params: {
-            'taxpayerId': _i1.ParameterDescription(
-              name: 'taxpayerId',
-              type: _i1.getType<String?>(),
-              nullable: true,
-            ),
-            'kind': _i1.ParameterDescription(
-              name: 'kind',
-              type: _i1.getType<String>(),
-              nullable: false,
-            ),
-            'period': _i1.ParameterDescription(
-              name: 'period',
-              type: _i1.getType<String>(),
-              nullable: false,
-            ),
-          },
-          call:
-              (
-                _i1.Session session,
-                Map<String, dynamic> params,
-              ) async => (endpoints['eis'] as _i2.EisEndpoint).generateSlsp(
-                session,
-                taxpayerId: params['taxpayerId'],
-                kind: params['kind'],
-                period: params['period'],
-              ),
-        ),
-        'generateWithholdingDat': _i1.MethodConnector(
-          name: 'generateWithholdingDat',
-          params: {
-            'taxpayerId': _i1.ParameterDescription(
-              name: 'taxpayerId',
-              type: _i1.getType<String?>(),
-              nullable: true,
-            ),
-            'kind': _i1.ParameterDescription(
-              name: 'kind',
-              type: _i1.getType<String>(),
-              nullable: false,
-            ),
-            'period': _i1.ParameterDescription(
-              name: 'period',
-              type: _i1.getType<String>(),
-              nullable: false,
-            ),
-          },
-          call:
-              (
-                _i1.Session session,
+                _is.Session session,
                 Map<String, dynamic> params,
               ) async =>
-                  (endpoints['eis'] as _i2.EisEndpoint).generateWithholdingDat(
+                  (endpoints['eis'] as _i6oenk0g.EisEndpoint).issueCreditMemo(
+                    session,
+                    params['invoiceId'],
+                    reason: params['reason'],
+                  ),
+        ),
+        'syncConnector': _is.MethodConnector(
+          name: 'syncConnector',
+          params: {
+            'connector': _is.ParameterDescription(
+              name: 'connector',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+            'payloadJson': _is.ParameterDescription(
+              name: 'payloadJson',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+            'taxpayerId': _is.ParameterDescription(
+              name: 'taxpayerId',
+              type: _is.getType<String?>(),
+              nullable: true,
+            ),
+          },
+          call:
+              (
+                _is.Session session,
+                Map<String, dynamic> params,
+              ) async =>
+                  (endpoints['eis'] as _i6oenk0g.EisEndpoint).syncConnector(
+                    session,
+                    params['connector'],
+                    params['payloadJson'],
+                    taxpayerId: params['taxpayerId'],
+                  ),
+        ),
+        'importCsvBatch': _is.MethodConnector(
+          name: 'importCsvBatch',
+          params: {
+            'csvText': _is.ParameterDescription(
+              name: 'csvText',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+            'taxpayerId': _is.ParameterDescription(
+              name: 'taxpayerId',
+              type: _is.getType<String?>(),
+              nullable: true,
+            ),
+          },
+          call:
+              (
+                _is.Session session,
+                Map<String, dynamic> params,
+              ) async =>
+                  (endpoints['eis'] as _i6oenk0g.EisEndpoint).importCsvBatch(
+                    session,
+                    params['csvText'],
+                    taxpayerId: params['taxpayerId'],
+                  ),
+        ),
+        'getCasBooks': _is.MethodConnector(
+          name: 'getCasBooks',
+          params: {
+            'taxpayerId': _is.ParameterDescription(
+              name: 'taxpayerId',
+              type: _is.getType<String?>(),
+              nullable: true,
+            ),
+            'bookType': _is.ParameterDescription(
+              name: 'bookType',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _is.Session session,
+                Map<String, dynamic> params,
+              ) async =>
+                  (endpoints['eis'] as _i6oenk0g.EisEndpoint).getCasBooks(
+                    session,
+                    taxpayerId: params['taxpayerId'],
+                    bookType: params['bookType'],
+                  ),
+        ),
+        'generateSlsp': _is.MethodConnector(
+          name: 'generateSlsp',
+          params: {
+            'taxpayerId': _is.ParameterDescription(
+              name: 'taxpayerId',
+              type: _is.getType<String?>(),
+              nullable: true,
+            ),
+            'kind': _is.ParameterDescription(
+              name: 'kind',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+            'period': _is.ParameterDescription(
+              name: 'period',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _is.Session session,
+                Map<String, dynamic> params,
+              ) async =>
+                  (endpoints['eis'] as _i6oenk0g.EisEndpoint).generateSlsp(
                     session,
                     taxpayerId: params['taxpayerId'],
                     kind: params['kind'],
                     period: params['period'],
                   ),
         ),
-        'generateForm2307': _i1.MethodConnector(
-          name: 'generateForm2307',
+        'generateWithholdingDat': _is.MethodConnector(
+          name: 'generateWithholdingDat',
           params: {
-            'invoiceId': _i1.ParameterDescription(
-              name: 'invoiceId',
-              type: _i1.getType<String>(),
+            'taxpayerId': _is.ParameterDescription(
+              name: 'taxpayerId',
+              type: _is.getType<String?>(),
+              nullable: true,
+            ),
+            'kind': _is.ParameterDescription(
+              name: 'kind',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+            'period': _is.ParameterDescription(
+              name: 'period',
+              type: _is.getType<String>(),
               nullable: false,
             ),
           },
           call:
               (
-                _i1.Session session,
+                _is.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['eis'] as _i2.EisEndpoint).generateForm2307(
-                session,
-                params['invoiceId'],
-              ),
+              ) async => (endpoints['eis'] as _i6oenk0g.EisEndpoint)
+                  .generateWithholdingDat(
+                    session,
+                    taxpayerId: params['taxpayerId'],
+                    kind: params['kind'],
+                    period: params['period'],
+                  ),
         ),
-        'getAuditTrail': _i1.MethodConnector(
+        'generateForm2307': _is.MethodConnector(
+          name: 'generateForm2307',
+          params: {
+            'invoiceId': _is.ParameterDescription(
+              name: 'invoiceId',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _is.Session session,
+                Map<String, dynamic> params,
+              ) async =>
+                  (endpoints['eis'] as _i6oenk0g.EisEndpoint).generateForm2307(
+                    session,
+                    params['invoiceId'],
+                  ),
+        ),
+        'getAuditTrail': _is.MethodConnector(
           name: 'getAuditTrail',
           params: {},
           call:
               (
-                _i1.Session session,
+                _is.Session session,
                 Map<String, dynamic> params,
-              ) async =>
-                  (endpoints['eis'] as _i2.EisEndpoint).getAuditTrail(session),
+              ) async => (endpoints['eis'] as _i6oenk0g.EisEndpoint)
+                  .getAuditTrail(session),
         ),
       },
     );
-    connectors['greeting'] = _i1.EndpointConnector(
+    connectors['greeting'] = _is.EndpointConnector(
       name: 'greeting',
       endpoint: endpoints['greeting']!,
       methodConnectors: {
-        'hello': _i1.MethodConnector(
+        'hello': _is.MethodConnector(
           name: 'hello',
           params: {
-            'name': _i1.ParameterDescription(
+            'name': _is.ParameterDescription(
               name: 'name',
-              type: _i1.getType<String>(),
+              type: _is.getType<String>(),
               nullable: false,
             ),
           },
           call:
               (
-                _i1.Session session,
+                _is.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['greeting'] as _i3.GreetingEndpoint).hello(
-                session,
-                params['name'],
-              ),
+              ) async =>
+                  (endpoints['greeting'] as _il624ik7.GreetingEndpoint).hello(
+                    session,
+                    params['name'],
+                  ),
         ),
       },
     );

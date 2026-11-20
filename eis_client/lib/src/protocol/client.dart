@@ -10,28 +10,29 @@
 // ignore_for_file: invalid_use_of_internal_member
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'package:serverpod_client/serverpod_client.dart' as _i1;
-import 'dart:async' as _i2;
-import 'package:eis_client/src/protocol/greetings/greeting.dart' as _i3;
-import 'protocol.dart' as _i4;
+import 'dart:async' as _ida;
+import 'package:eis_client/src/protocol/greetings/greeting.dart' as _ikwcg3p2;
+import 'package:http/http.dart' as _i85jenna;
+import 'package:serverpod_client/serverpod_client.dart' as _isc;
+import 'protocol.dart' as _il2as5qe;
 
 /// Serverpod RPC Endpoint exposing Philippine BIR EIS v2.01 & CAS operations
 /// via generated `client.eis.*` methods.
 /// {@category Endpoint}
-class EndpointEis extends _i1.EndpointRef {
-  EndpointEis(_i1.EndpointCaller caller) : super(caller);
+class EndpointEis extends _isc.EndpointRef {
+  EndpointEis(_isc.EndpointCaller caller) : super(caller);
 
   @override
   String get name => 'eis';
 
-  _i2.Future<String> getDashboardSummary({String? taxpayerId}) =>
+  _ida.Future<String> getDashboardSummary({String? taxpayerId}) =>
       caller.callServerEndpoint<String>(
         'eis',
         'getDashboardSummary',
         {'taxpayerId': taxpayerId},
       );
 
-  _i2.Future<String> updateGatewayConfig({
+  _ida.Future<String> updateGatewayConfig({
     String? mode,
     bool? simulateOutage,
   }) => caller.callServerEndpoint<String>(
@@ -43,47 +44,47 @@ class EndpointEis extends _i1.EndpointRef {
     },
   );
 
-  _i2.Future<String> getTaxpayers() => caller.callServerEndpoint<String>(
+  _ida.Future<String> getTaxpayers() => caller.callServerEndpoint<String>(
     'eis',
     'getTaxpayers',
     {},
   );
 
-  _i2.Future<String> registerTaxpayer(String bodyJson) =>
+  _ida.Future<String> registerTaxpayer(String bodyJson) =>
       caller.callServerEndpoint<String>(
         'eis',
         'registerTaxpayer',
         {'bodyJson': bodyJson},
       );
 
-  _i2.Future<String> rotateTaxpayerKeys(String taxpayerId) =>
+  _ida.Future<String> rotateTaxpayerKeys(String taxpayerId) =>
       caller.callServerEndpoint<String>(
         'eis',
         'rotateTaxpayerKeys',
         {'taxpayerId': taxpayerId},
       );
 
-  _i2.Future<String> getInvoices({String? taxpayerId}) =>
+  _ida.Future<String> getInvoices({String? taxpayerId}) =>
       caller.callServerEndpoint<String>(
         'eis',
         'getInvoices',
         {'taxpayerId': taxpayerId},
       );
 
-  _i2.Future<String> createInvoice(String payloadJson) =>
+  _ida.Future<String> createInvoice(String payloadJson) =>
       caller.callServerEndpoint<String>(
         'eis',
         'createInvoice',
         {'payloadJson': payloadJson},
       );
 
-  _i2.Future<String> processRetryQueue() => caller.callServerEndpoint<String>(
+  _ida.Future<String> processRetryQueue() => caller.callServerEndpoint<String>(
     'eis',
     'processRetryQueue',
     {},
   );
 
-  _i2.Future<String> issueCreditMemo(
+  _ida.Future<String> issueCreditMemo(
     String invoiceId, {
     required String reason,
   }) => caller.callServerEndpoint<String>(
@@ -95,7 +96,7 @@ class EndpointEis extends _i1.EndpointRef {
     },
   );
 
-  _i2.Future<String> syncConnector(
+  _ida.Future<String> syncConnector(
     String connector,
     String payloadJson, {
     String? taxpayerId,
@@ -109,7 +110,7 @@ class EndpointEis extends _i1.EndpointRef {
     },
   );
 
-  _i2.Future<int> importCsvBatch(
+  _ida.Future<int> importCsvBatch(
     String csvText, {
     String? taxpayerId,
   }) => caller.callServerEndpoint<int>(
@@ -121,7 +122,7 @@ class EndpointEis extends _i1.EndpointRef {
     },
   );
 
-  _i2.Future<String> getCasBooks({
+  _ida.Future<String> getCasBooks({
     String? taxpayerId,
     required String bookType,
   }) => caller.callServerEndpoint<String>(
@@ -133,7 +134,7 @@ class EndpointEis extends _i1.EndpointRef {
     },
   );
 
-  _i2.Future<String> generateSlsp({
+  _ida.Future<String> generateSlsp({
     String? taxpayerId,
     required String kind,
     required String period,
@@ -147,7 +148,7 @@ class EndpointEis extends _i1.EndpointRef {
     },
   );
 
-  _i2.Future<String> generateWithholdingDat({
+  _ida.Future<String> generateWithholdingDat({
     String? taxpayerId,
     required String kind,
     required String period,
@@ -161,14 +162,14 @@ class EndpointEis extends _i1.EndpointRef {
     },
   );
 
-  _i2.Future<String> generateForm2307(String invoiceId) =>
+  _ida.Future<String> generateForm2307(String invoiceId) =>
       caller.callServerEndpoint<String>(
         'eis',
         'generateForm2307',
         {'invoiceId': invoiceId},
       );
 
-  _i2.Future<String> getAuditTrail() => caller.callServerEndpoint<String>(
+  _ida.Future<String> getAuditTrail() => caller.callServerEndpoint<String>(
     'eis',
     'getAuditTrail',
     {},
@@ -178,42 +179,39 @@ class EndpointEis extends _i1.EndpointRef {
 /// This is an example endpoint that returns a greeting message through
 /// its [hello] method.
 /// {@category Endpoint}
-class EndpointGreeting extends _i1.EndpointRef {
-  EndpointGreeting(_i1.EndpointCaller caller) : super(caller);
+class EndpointGreeting extends _isc.EndpointRef {
+  EndpointGreeting(_isc.EndpointCaller caller) : super(caller);
 
   @override
   String get name => 'greeting';
 
   /// Returns a personalized greeting message: "Hello {name}".
-  _i2.Future<_i3.Greeting> hello(String name) =>
-      caller.callServerEndpoint<_i3.Greeting>(
+  _ida.Future<_ikwcg3p2.Greeting> hello(String name) =>
+      caller.callServerEndpoint<_ikwcg3p2.Greeting>(
         'greeting',
         'hello',
         {'name': name},
       );
 }
 
-class Client extends _i1.ServerpodClientShared {
+class Client extends _isc.ServerpodClientShared {
   Client(
     String host, {
     dynamic securityContext,
-    @Deprecated(
-      'Use authKeyProvider instead. This will be removed in future releases.',
-    )
-    super.authenticationKeyManager,
     Duration? streamingConnectionTimeout,
     Duration? connectionTimeout,
     Function(
-      _i1.MethodCallContext,
+      _isc.MethodCallContext,
       Object,
       StackTrace,
     )?
     onFailedCall,
-    Function(_i1.MethodCallContext)? onSucceededCall,
+    Function(_isc.MethodCallContext)? onSucceededCall,
     bool? disconnectStreamsOnLostInternetConnection,
+    _i85jenna.Client? httpClientOverride,
   }) : super(
          host,
-         _i4.Protocol(),
+         _il2as5qe.Protocol(),
          securityContext: securityContext,
          streamingConnectionTimeout: streamingConnectionTimeout,
          connectionTimeout: connectionTimeout,
@@ -221,6 +219,7 @@ class Client extends _i1.ServerpodClientShared {
          onSucceededCall: onSucceededCall,
          disconnectStreamsOnLostInternetConnection:
              disconnectStreamsOnLostInternetConnection,
+         httpClientOverride: httpClientOverride,
        ) {
     eis = EndpointEis(this);
     greeting = EndpointGreeting(this);
@@ -231,11 +230,11 @@ class Client extends _i1.ServerpodClientShared {
   late final EndpointGreeting greeting;
 
   @override
-  Map<String, _i1.EndpointRef> get endpointRefLookup => {
+  Map<String, _isc.EndpointRef> get endpointRefLookup => {
     'eis': eis,
     'greeting': greeting,
   };
 
   @override
-  Map<String, _i1.ModuleEndpointCaller> get moduleLookup => {};
+  Map<String, _isc.ModuleEndpointCaller> get moduleLookup => {};
 }
