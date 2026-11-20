@@ -13,7 +13,11 @@ import 'services/ies_api_client.dart';
 // Gene - Nov, 17, 2026: Connect Flutter UI natively to Serverpod RPC Client via getServerUrl().
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final serverUrl = await getServerUrl();
+  // final serverUrl = await getServerUrl();
+  // Gene - Nov, 20, 2026: Resolve Android Emulator host (10.0.2.2) and enforce trailing slash for Serverpod Client.
+  final rawUrl = await getServerUrl();
+  final resolvedUrl = rawUrl.replaceFirst('://localhost', '://$localhost');
+  final serverUrl = resolvedUrl.endsWith('/') ? resolvedUrl : '$resolvedUrl/';
   final client = sp.Client(serverUrl)
     ..connectivityMonitor = FlutterConnectivityMonitor();
 

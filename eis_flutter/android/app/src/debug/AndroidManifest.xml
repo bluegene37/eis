@@ -4,4 +4,6 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Gene - Nov, 20, 2026: Allow HTTP cleartext local development traffic to Serverpod (10.0.2.2:8080). -->
+    <application android:usesCleartextTraffic="true" />
 </manifest>

@@ -214,9 +214,15 @@ class EisEngineService {
         (input.issueDtm != null ? DateTime.tryParse(input.issueDtm!) : null) ??
             DateTime.now();
 
+    // branch.lastSequence += 1;
+    // final seqNum = branch.lastSequence;
+    // final eisUniqueId = buildEisUniqueId(issueDate, tp.eisCertId, seqNum);
+    // Gene - Nov, 20, 2026: Use taxpayer-wide monotonic lastEisSequence for EisUniqueId (shared EisCertId) while preserving per-branch sequence for CompInvoiceId.
     branch.lastSequence += 1;
+    tp.lastEisSequence += 1;
     final seqNum = branch.lastSequence;
-    final eisUniqueId = buildEisUniqueId(issueDate, tp.eisCertId, seqNum);
+    final eisUniqueId =
+        buildEisUniqueId(issueDate, tp.eisCertId, tp.lastEisSequence);
     final compInvoiceId = (input.compInvoiceId != null &&
             input.compInvoiceId!.trim().isNotEmpty)
         ? input.compInvoiceId!.trim()

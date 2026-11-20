@@ -146,6 +146,36 @@ void main() {
       expect(ok.lastReceipt?.ackCode, 'ACK-200');
       expect(ok.payload.eisUniqueId.length, 24);
 
+      // Gene - Nov, 20, 2026: Verify multi-branch issuance under the same TIN generates distinct EisUniqueIds (no DUP001 collision).
+      final tpForBranch = engine.getTaxpayerById();
+      engine.addBranch(
+        tpForBranch.id,
+        branchCd: '0001',
+        branchName: 'BGC POS Branch',
+        address: const BirAddress(
+          street: '9th Ave',
+          barangay: 'Fort Bonifacio',
+          city: 'Taguig City',
+          province: 'Metro Manila',
+          zipCode: '1634',
+        ),
+      );
+      final branchSale = await engine.ingestAndTransmitInvoice(
+        const CanonicalIngestInput(
+          branchCd: '0001',
+          sourceSystem: 'IES_UI',
+          systemType: 'POS',
+          transClass: 'B2C',
+          buyerName: 'Branch Walk-in',
+          items: [
+            RawLineItemInput(itemNm: 'Branch Item', qty: 1, unitPrice: 1200),
+          ],
+        ),
+      );
+      expect(branchSale.status, 'TRANSMITTED');
+      expect(branchSale.lastReceipt?.ackCode, 'ACK-200');
+      expect(branchSale.payload.eisUniqueId, isNot(ok.payload.eisUniqueId));
+
       final synErr = await engine.ingestAndTransmitInvoice(
         const CanonicalIngestInput(
           sourceSystem: 'IES_UI',

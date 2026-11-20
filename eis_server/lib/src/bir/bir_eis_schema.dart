@@ -375,6 +375,8 @@ class TaxpayerProfile {
   String privateKeyJson;
   String aesKeyHex;
   String keyId;
+  // Gene - Nov, 20, 2026: Added taxpayer-level lastEisSequence so EisUniqueId never collides across branches sharing an EisCertId.
+  int lastEisSequence;
   final List<TaxpayerBranch> branches;
   final String createdAt;
 
@@ -392,12 +394,20 @@ class TaxpayerProfile {
     required this.privateKeyJson,
     required this.aesKeyHex,
     required this.keyId,
+    this.lastEisSequence = 0,
     required this.branches,
     required this.createdAt,
   });
 
   factory TaxpayerProfile.fromJson(Map<String, dynamic> json) {
     final rawBranches = (json['branches'] as List<dynamic>?) ?? const [];
+    final parsedBranches = rawBranches
+        .map((e) => TaxpayerBranch.fromJson(e as Map<String, dynamic>))
+        .toList();
+    final fallbackEisSeq = parsedBranches.fold<int>(
+      0,
+      (sum, b) => sum + b.lastSequence,
+    );
     return TaxpayerProfile(
       id: json['id']?.toString() ?? '',
       workspaceId: json['workspaceId']?.toString() ?? 'WS-PH-DEFAULT',
@@ -412,9 +422,9 @@ class TaxpayerProfile {
       privateKeyJson: json['privateKeyJson']?.toString() ?? '',
       aesKeyHex: json['aesKeyHex']?.toString() ?? '',
       keyId: json['keyId']?.toString() ?? '',
-      branches: rawBranches
-          .map((e) => TaxpayerBranch.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      lastEisSequence:
+          (json['lastEisSequence'] as num?)?.toInt() ?? fallbackEisSeq,
+      branches: parsedBranches,
       createdAt: json['createdAt']?.toString() ?? '',
     );
   }
@@ -430,6 +440,7 @@ class TaxpayerProfile {
         'eisCertId': eisCertId,
         'pttNumber': pttNumber,
         'keyId': keyId,
+        'lastEisSequence': lastEisSequence,
         'publicKeyPem': publicKeyJson,
         if (includePrivate) 'publicKeyJson': publicKeyJson,
         if (includePrivate) 'privateKeyJson': privateKeyJson,
