@@ -1,4 +1,53 @@
-# === AI Tool Directories & Caches (NEVER stage or commit) ===
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# Widget Preview related
+.widget_preview/
+
+# Gene - Nov, 20, 2026: Ignore local AI tooling, plans, caches, and local EIS data snapshots.
 .agents/
 .agent/
 .claude/
@@ -10,8 +59,6 @@
 .antigravity/
 graphify-out/
 .omg/
-
-# === AI Instruction & Plan Files (NEVER stage or commit) ===
 AGENTS.md
 CLAUDE.md
 GEMINI.md
@@ -22,50 +69,14 @@ plan.md
 implementation_plan.md
 walkthrough.md
 task.md
+eis_v2_store.json
 
-# === Node / TypeScript Backend ===
-node_modules/
-dist/
-build/
+# Gene - Nov, 20, 2026: Ignore environment files and cryptographic keys / BIR certificates.
 .env
 .env.*
 !.env.example
-*.log
-npm-debug.log*
-apps/backend/data/*.json
-apps/backend/coverage/
-
-# === Flutter / Dart Client ===
-.dart_tool/
-.packages
-.flutter-plugins
-.flutter-plugins-dependencies
-apps/flutter_client/build/
-apps/flutter_client/.dart_tool/
-apps/flutter_client/ios/Pods/
-apps/flutter_client/macos/Pods/
-apps/flutter_client/*.iml
-
-# === Cryptographic Keys & BIR Certificates (NEVER stage or commit) ===
 *.pem
 *.key
 *.p12
 *.pfx
 *.crt
-
-# === macOS / IDE ===
-.DS_Store
-.idea/
-.vscode/
-
-# Gene - Nov, 17, 2026: Added Serverpod ignore patterns and archived previous TS prototype stack.
-_archived_ts_stack/
-eis_server/data/*.json
-eis_server/config/passwords.yaml
-eis_server/.dart_tool/
-eis_client/.dart_tool/
-eis_flutter/.dart_tool/
-eis_flutter/build/
-eis_flutter/ios/Pods/
-eis_flutter/macos/Pods/
-eis_flutter/*.iml
