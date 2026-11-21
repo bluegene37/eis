@@ -87,3 +87,15 @@ server/eis_server/data/*.json
 server/eis_server/config/passwords.yaml
 server/eis_server/.dart_tool/
 server/eis_client/.dart_tool/
+
+# Gene - Nov, 21, 2026: Ignore mobile signing keystores, Apple provisioning/keys, and Firebase credential files.
+*.jks
+*.keystore
+android/key.properties
+key.properties
+*.mobileprovision
+*.cer
+*.p8
+**/google-services.json
+**/GoogleService-Info.plist
+server/eis_server/config/firebase_service_account_key.json

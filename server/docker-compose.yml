@@ -1,17 +1,18 @@
+# Gene - Nov, 21, 2026: Externalized PostgreSQL credentials to environment variables (see server/.env.example) before pushing to GitHub.
 services:
   postgres:
     image: postgres:16-alpine
     container_name: ies-postgres
     environment:
-      POSTGRES_DB: ies_bir
-      POSTGRES_USER: ies_user
-      POSTGRES_PASSWORD: ies_dev_password
+      POSTGRES_DB: ${POSTGRES_DB:-ies_bir}
+      POSTGRES_USER: ${POSTGRES_USER:-ies_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in server/.env}
     ports:
       - "5432:5432"
     volumes:
       - ies_pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ies_user -d ies_bir"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-ies_user} -d $${POSTGRES_DB:-ies_bir}"]
       interval: 5s
       timeout: 5s
       retries: 5
