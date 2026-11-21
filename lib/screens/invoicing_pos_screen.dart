@@ -1,8 +1,11 @@
 // Gene - Nov, 20, 2026: Ported from eis_flutter screens.
+// Gene - Nov, 20, 2026: Upgraded Invoicing / POS with Soft UI 2.0 SectionCard icons and recessed EOPT preview & transmission result wells.
 import 'dart:convert';
 import 'package:material_ui/material_ui.dart';
 import '../models/ies_models.dart';
 import '../services/ies_api_client.dart';
+import '../theme/eis_neumorphic_theme.dart';
+import '../widgets/neumorphic_widgets.dart';
 import '../widgets/shared_components.dart';
 
 class InvoicingPosScreen extends StatefulWidget {
@@ -120,7 +123,10 @@ class _InvoicingPosScreenState extends State<InvoicingPosScreen> {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
+        // SectionCard(
+        //   title: 'EOPT (RR 7-2024) Sales / Service Invoice & POS Builder',
         SectionCard(
+          icon: Icons.point_of_sale_rounded,
           title: 'EOPT (RR 7-2024) Sales / Service Invoice & POS Builder',
           subtitle:
               'Automatically computes 12% VAT, Senior Citizen / PWD 20% VAT-Exempt discounts, Zero-Rated, and RR 6-2026 CWT ATC.',
@@ -534,18 +540,41 @@ class _InvoicingPosScreenState extends State<InvoicingPosScreen> {
               const Divider(height: 24),
 
               // Live EOPT Calculation Preview Bar
-              Wrap(
-                spacing: 24,
-                runSpacing: 8,
-                children: [
-                  _metricChip('Gross Sales', formatPhp(preview['gross'] ?? 0)),
-                  _metricChip('SC/PWD Discount', formatPhp(preview['discount'] ?? 0)),
-                  _metricChip('Net Sales', formatPhp(preview['netSales'] ?? 0)),
-                  _metricChip('12% VAT', formatPhp(preview['vat'] ?? 0)),
-                  _metricChip('CWT Withheld', formatPhp(preview['cwt'] ?? 0)),
-                  _metricChip('Net Amount Due', formatPhp(preview['totalDue'] ?? 0),
-                      bold: true),
-                ],
+              // Wrap(
+              //   spacing: 24,
+              //   runSpacing: 8,
+              //   children: [
+              //     _metricChip('Gross Sales', formatPhp(preview['gross'] ?? 0)),
+              //     _metricChip('SC/PWD Discount', formatPhp(preview['discount'] ?? 0)),
+              //     _metricChip('Net Sales', formatPhp(preview['netSales'] ?? 0)),
+              //     _metricChip('12% VAT', formatPhp(preview['vat'] ?? 0)),
+              //     _metricChip('CWT Withheld', formatPhp(preview['cwt'] ?? 0)),
+              //     _metricChip('Net Amount Due', formatPhp(preview['totalDue'] ?? 0),
+              //         bold: true),
+              //   ],
+              // ),
+              // Gene - Nov, 20, 2026: Recessed NeumorphicWell EOPT calculation bar with accent Net Amount Due pill.
+              NeumorphicWell(
+                borderRadius: 16,
+                padding: const EdgeInsets.all(16),
+                child: Wrap(
+                  spacing: 24,
+                  runSpacing: 12,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    _metricChip(context, 'Gross Sales', formatPhp(preview['gross'] ?? 0)),
+                    _metricChip(context, 'SC/PWD Discount', formatPhp(preview['discount'] ?? 0)),
+                    _metricChip(context, 'Net Sales', formatPhp(preview['netSales'] ?? 0)),
+                    _metricChip(context, '12% VAT', formatPhp(preview['vat'] ?? 0)),
+                    _metricChip(context, 'CWT Withheld', formatPhp(preview['cwt'] ?? 0)),
+                    _metricChip(
+                      context,
+                      'Net Amount Due',
+                      formatPhp(preview['totalDue'] ?? 0),
+                      bold: true,
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 16),
               Wrap(
@@ -573,19 +602,40 @@ class _InvoicingPosScreenState extends State<InvoicingPosScreen> {
         ),
         if (_lastCreated != null) ...[
           const SizedBox(height: 16),
+          // SectionCard(
+          //   title: 'Last BIR EIS Transmission Result (${_lastCreated!.ackCode})',
+          //   subtitle: 'EisUniqueId: ${_lastCreated!.eisUniqueId}',
+          //   trailing: StatusBadge(
+          //     label: _lastCreated!.ackCode,
+          //     color: statusColor(context, _lastCreated!.status),
+          //   ),
+          //   child: SelectableText(
+          //     const JsonEncoder.withIndent('  ').convert({
+          //       'receipt': _lastCreated!.lastReceipt,
+          //       'payload': _lastCreated!.payload,
+          //     }),
+          //     style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+          //   ),
+          // ),
+          // Gene - Nov, 20, 2026: Added icon and recessed NeumorphicWell for last transmission JSON.
           SectionCard(
+            icon: Icons.receipt_rounded,
             title: 'Last BIR EIS Transmission Result (${_lastCreated!.ackCode})',
             subtitle: 'EisUniqueId: ${_lastCreated!.eisUniqueId}',
             trailing: StatusBadge(
               label: _lastCreated!.ackCode,
               color: statusColor(context, _lastCreated!.status),
             ),
-            child: SelectableText(
-              const JsonEncoder.withIndent('  ').convert({
-                'receipt': _lastCreated!.lastReceipt,
-                'payload': _lastCreated!.payload,
-              }),
-              style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+            child: NeumorphicWell(
+              borderRadius: 14,
+              padding: const EdgeInsets.all(14),
+              child: SelectableText(
+                const JsonEncoder.withIndent('  ').convert({
+                  'receipt': _lastCreated!.lastReceipt,
+                  'payload': _lastCreated!.payload,
+                }),
+                style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+              ),
             ),
           ),
         ],
@@ -593,20 +643,61 @@ class _InvoicingPosScreenState extends State<InvoicingPosScreen> {
     );
   }
 
-  Widget _metricChip(String label, String val, {bool bold = false}) {
-    return Column(
+  // Widget _metricChip(String label, String val, {bool bold = false}) {
+  //   return Column(
+  //     crossAxisAlignment: CrossAxisAlignment.start,
+  //     children: [
+  //       Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+  //       Text(
+  //         val,
+  //         style: TextStyle(
+  //           fontWeight: bold ? FontWeight.w700 : FontWeight.w600,
+  //           fontSize: bold ? 15 : 13,
+  //           fontFeatures: const [FontFeature.tabularFigures()],
+  //         ),
+  //       ),
+  //     ],
+  //   );
+  // }
+  Widget _metricChip(
+    BuildContext context,
+    String label,
+    String val, {
+    bool bold = false,
+  }) {
+    final tokens = EisNeumorphicTokens.of(context);
+    final content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: tokens.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 2),
         Text(
           val,
           style: TextStyle(
-            fontWeight: bold ? FontWeight.w700 : FontWeight.w600,
-            fontSize: bold ? 15 : 13,
+            color: bold ? tokens.accentPrimary : tokens.textPrimary,
+            fontWeight: bold ? FontWeight.w800 : FontWeight.w600,
+            fontSize: bold ? 16 : 13.5,
             fontFeatures: const [FontFeature.tabularFigures()],
           ),
         ),
       ],
+    );
+
+    if (!bold) return content;
+    return NeumorphicSurface(
+      depth: NeumorphicDepth.subtle,
+      borderRadius: 12,
+      tintColor: tokens.accentPrimary,
+      borderColor: tokens.accentPrimary.withValues(alpha: 0.3),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: content,
     );
   }
 }

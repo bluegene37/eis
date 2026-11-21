@@ -1,7 +1,11 @@
 // Gene - Nov, 20, 2026: Ported from eis_flutter screens.
+// Gene - Nov, 20, 2026: Upgraded Statutory Reports with Soft UI 2.0 icons, recessed .DAT/Form 2307 consoles, and one-tap Copy actions.
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import '../models/ies_models.dart';
 import '../services/ies_api_client.dart';
+import '../theme/eis_neumorphic_theme.dart';
+import '../widgets/neumorphic_widgets.dart';
 import '../widgets/shared_components.dart';
 
 class StatutoryReportsScreen extends StatefulWidget {
@@ -72,8 +76,169 @@ class _StatutoryReportsScreenState extends State<StatutoryReportsScreen> {
     }
   }
 
+//   @override
+//   Widget build(BuildContext context) {
+//     final cwtInvoices = widget.invoices
+//         .where((i) => i.summary.withholdingTaxAmt > 0)
+//         .toList();
+//
+//     return ListView(
+//       padding: const EdgeInsets.all(20),
+//       children: [
+//         SectionCard(
+//           title: 'BIR Statutory .DAT / .CSV File Generators',
+//           subtitle:
+//               'Generate BIR RELIEF SLSP, SAWT, and QAP (1601-EQ) transmittal files compliant with BIR validation modules.',
+//           child: Wrap(
+//             spacing: 10,
+//             runSpacing: 10,
+//             children: [
+//               FilledButton.icon(
+//                 onPressed: _loading ? null : () => _loadReport('SLSP_SALES'),
+//                 icon: const Icon(Icons.description_outlined),
+//                 label: const Text('SLSP Sales (.DAT)'),
+//               ),
+//               FilledButton.tonalIcon(
+//                 onPressed: _loading ? null : () => _loadReport('SLSP_PURCHASES'),
+//                 icon: const Icon(Icons.receipt_long_outlined),
+//                 label: const Text('SLSP Purchases (.DAT)'),
+//               ),
+//               FilledButton.tonalIcon(
+//                 onPressed: _loading ? null : () => _loadReport('SAWT'),
+//                 icon: const Icon(Icons.table_chart_outlined),
+//                 label: const Text('SAWT Alphalist (.DAT)'),
+//               ),
+//               FilledButton.tonalIcon(
+//                 onPressed: _loading ? null : () => _loadReport('QAP'),
+//                 icon: const Icon(Icons.summarize_outlined),
+//                 label: const Text('QAP 1601-EQ (.DAT)'),
+//               ),
+//             ],
+//           ),
+//         ),
+//         const SizedBox(height: 16),
+//         SectionCard(
+//           title: 'BIR Form 2307 Certificates (Creditable Tax Withheld at Source)',
+//           subtitle:
+//               'Invoices carrying ATC codes (${cwtInvoices.length} available)',
+//           child: cwtInvoices.isEmpty
+//               ? const Text('No invoices with CWT/ATC withholding recorded yet.')
+//               : Wrap(
+//                   spacing: 10,
+//                   runSpacing: 10,
+//                   children: cwtInvoices.map((inv) {
+//                     return ActionChip(
+//                       avatar: const Icon(Icons.picture_as_pdf_outlined, size: 18),
+//                       label: Text(
+//                         '${inv.compInvoiceId} (${formatPhp(inv.summary.withholdingTaxAmt)})',
+//                       ),
+//                       onPressed: () => _load2307(inv.id),
+//                     );
+//                   }).toList(),
+//                 ),
+//         ),
+//         if (_loading)
+//           const Padding(
+//             padding: EdgeInsets.all(24),
+//             child: Center(child: CircularProgressIndicator()),
+//           ),
+//         if (_activeReport != null) ...[
+//           const SizedBox(height: 16),
+//           SectionCard(
+//             title: _activeTitle,
+//             subtitle:
+//                 'Filename: ${_activeReport!.filename}  |  Rows: ${_activeReport!.rowCount}',
+//             child: DefaultTabController(
+//               length: 2,
+//               child: Column(
+//                 crossAxisAlignment: CrossAxisAlignment.start,
+//                 children: [
+//                   const TabBar(
+//                     tabs: [
+//                       Tab(text: 'BIR .DAT Format'),
+//                       Tab(text: 'CSV Export'),
+//                     ],
+//                   ),
+//                   SizedBox(
+//                     height: 260,
+//                     child: TabBarView(
+//                       children: [
+//                         SingleChildScrollView(
+//                           padding: const EdgeInsets.all(12),
+//                           child: SelectableText(
+//                             _activeReport!.datContent,
+//                             style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+//                           ),
+//                         ),
+//                         SingleChildScrollView(
+//                           padding: const EdgeInsets.all(12),
+//                           child: SelectableText(
+//                             _activeReport!.csvContent,
+//                             style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+//                           ),
+//                         ),
+//                       ],
+//                     ),
+//                   ),
+//                 ],
+//               ),
+//             ),
+//           ),
+//         ],
+//         if (_activeForm2307 != null) ...[
+//           const SizedBox(height: 16),
+//           SectionCard(
+//             title: _activeTitle,
+//             subtitle:
+//                 'Period: ${_activeForm2307!['periodFrom']} to ${_activeForm2307!['periodTo']}',
+//             child: Column(
+//               crossAxisAlignment: CrossAxisAlignment.start,
+//               children: [
+//                 Text(
+//                   'Payee: ${(_activeForm2307!['payee'] as Map)['name']} (TIN: ${(_activeForm2307!['payee'] as Map)['tin']})',
+//                 ),
+//                 Text(
+//                   'Payor: ${(_activeForm2307!['payor'] as Map)['name']} (TIN: ${(_activeForm2307!['payor'] as Map)['tin']})',
+//                 ),
+//                 const SizedBox(height: 8),
+//                 Text(
+//                   'Total Tax Withheld: ${formatPhp((_activeForm2307!['totalTaxWithheld'] as num).toDouble())}',
+//                   style: const TextStyle(fontWeight: FontWeight.w700),
+//                 ),
+//                 const SizedBox(height: 12),
+//                 const Text('Printable HTML Template:',
+//                     style: TextStyle(fontWeight: FontWeight.w600)),
+//                 const SizedBox(height: 6),
+//                 Container(
+//                   padding: const EdgeInsets.all(10),
+//                   decoration: BoxDecoration(
+//                     color: Theme.of(context).colorScheme.surfaceContainerLowest,
+//                     borderRadius: BorderRadius.circular(8),
+//                   ),
+//                   child: SelectableText(
+//                     _activeForm2307!['printableHtml'].toString(),
+//                     style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
+//                   ),
+//                 ),
+//               ],
+//             ),
+//           ),
+//         ],
+//       ],
+//     );
+//   }
+  Future<void> _copyText(String content, String label) async {
+    await Clipboard.setData(ClipboardData(text: content));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Copied $label to clipboard')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final tokens = EisNeumorphicTokens.of(context);
     final cwtInvoices = widget.invoices
         .where((i) => i.summary.withholdingTaxAmt > 0)
         .toList();
@@ -82,6 +247,7 @@ class _StatutoryReportsScreenState extends State<StatutoryReportsScreen> {
       padding: const EdgeInsets.all(20),
       children: [
         SectionCard(
+          icon: Icons.file_download_rounded,
           title: 'BIR Statutory .DAT / .CSV File Generators',
           subtitle:
               'Generate BIR RELIEF SLSP, SAWT, and QAP (1601-EQ) transmittal files compliant with BIR validation modules.',
@@ -112,8 +278,9 @@ class _StatutoryReportsScreenState extends State<StatutoryReportsScreen> {
             ],
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 18),
         SectionCard(
+          icon: Icons.workspace_premium_rounded,
           title: 'BIR Form 2307 Certificates (Creditable Tax Withheld at Source)',
           subtitle:
               'Invoices carrying ATC codes (${cwtInvoices.length} available)',
@@ -139,11 +306,20 @@ class _StatutoryReportsScreenState extends State<StatutoryReportsScreen> {
             child: Center(child: CircularProgressIndicator()),
           ),
         if (_activeReport != null) ...[
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
           SectionCard(
+            icon: Icons.code_rounded,
             title: _activeTitle,
             subtitle:
                 'Filename: ${_activeReport!.filename}  |  Rows: ${_activeReport!.rowCount}',
+            trailing: FilledButton.tonalIcon(
+              onPressed: () => _copyText(
+                _activeReport!.datContent,
+                '${_activeReport!.filename} (.DAT)',
+              ),
+              icon: const Icon(Icons.copy_rounded, size: 16),
+              label: const Text('Copy .DAT'),
+            ),
             child: DefaultTabController(
               length: 2,
               child: Column(
@@ -155,22 +331,35 @@ class _StatutoryReportsScreenState extends State<StatutoryReportsScreen> {
                       Tab(text: 'CSV Export'),
                     ],
                   ),
+                  const SizedBox(height: 12),
                   SizedBox(
                     height: 260,
                     child: TabBarView(
                       children: [
-                        SingleChildScrollView(
-                          padding: const EdgeInsets.all(12),
-                          child: SelectableText(
-                            _activeReport!.datContent,
-                            style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                        NeumorphicWell(
+                          borderRadius: 14,
+                          padding: const EdgeInsets.all(14),
+                          child: SingleChildScrollView(
+                            child: SelectableText(
+                              _activeReport!.datContent,
+                              style: const TextStyle(
+                                fontFamily: 'monospace',
+                                fontSize: 12,
+                              ),
+                            ),
                           ),
                         ),
-                        SingleChildScrollView(
-                          padding: const EdgeInsets.all(12),
-                          child: SelectableText(
-                            _activeReport!.csvContent,
-                            style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                        NeumorphicWell(
+                          borderRadius: 14,
+                          padding: const EdgeInsets.all(14),
+                          child: SingleChildScrollView(
+                            child: SelectableText(
+                              _activeReport!.csvContent,
+                              style: const TextStyle(
+                                fontFamily: 'monospace',
+                                fontSize: 12,
+                              ),
+                            ),
                           ),
                         ),
                       ],
@@ -182,35 +371,60 @@ class _StatutoryReportsScreenState extends State<StatutoryReportsScreen> {
           ),
         ],
         if (_activeForm2307 != null) ...[
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
           SectionCard(
+            icon: Icons.description_rounded,
             title: _activeTitle,
             subtitle:
                 'Period: ${_activeForm2307!['periodFrom']} to ${_activeForm2307!['periodTo']}',
+            trailing: FilledButton.tonalIcon(
+              onPressed: () => _copyText(
+                _activeForm2307!['printableHtml'].toString(),
+                'Form 2307 HTML',
+              ),
+              icon: const Icon(Icons.copy_rounded, size: 16),
+              label: const Text('Copy HTML'),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Payee: ${(_activeForm2307!['payee'] as Map)['name']} (TIN: ${(_activeForm2307!['payee'] as Map)['tin']})',
+                NeumorphicWell(
+                  borderRadius: 14,
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Payee: ${(_activeForm2307!['payee'] as Map)['name']} (TIN: ${(_activeForm2307!['payee'] as Map)['tin']})',
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Payor: ${(_activeForm2307!['payor'] as Map)['name']} (TIN: ${(_activeForm2307!['payor'] as Map)['tin']})',
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Total Tax Withheld: ${formatPhp((_activeForm2307!['totalTaxWithheld'] as num).toDouble())}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          color: tokens.accentPrimary,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+                const SizedBox(height: 14),
                 Text(
-                  'Payor: ${(_activeForm2307!['payor'] as Map)['name']} (TIN: ${(_activeForm2307!['payor'] as Map)['tin']})',
+                  'Printable HTML Template:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: tokens.textPrimary,
+                  ),
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  'Total Tax Withheld: ${formatPhp((_activeForm2307!['totalTaxWithheld'] as num).toDouble())}',
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 12),
-                const Text('Printable HTML Template:',
-                    style: TextStyle(fontWeight: FontWeight.w600)),
-                const SizedBox(height: 6),
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerLowest,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+                NeumorphicWell(
+                  borderRadius: 14,
+                  padding: const EdgeInsets.all(14),
                   child: SelectableText(
                     _activeForm2307!['printableHtml'].toString(),
                     style: const TextStyle(fontFamily: 'monospace', fontSize: 11),

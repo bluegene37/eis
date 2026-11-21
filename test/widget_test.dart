@@ -9,6 +9,8 @@ import 'package:eis/core/bir/eis_engine_service.dart';
 import 'package:eis/main.dart';
 import 'package:eis/models/ies_models.dart';
 import 'package:eis/services/ies_api_client.dart';
+// Gene - Nov, 20, 2026: Added neumorphic theme tokens import for light/dark theme verification.
+import 'package:eis/theme/eis_neumorphic_theme.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -300,6 +302,66 @@ void main() {
 
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
+  });
+
+  // Gene - Nov, 20, 2026: Verify Soft UI 2.0 Light & Dark theme tokens and live ThemeMode toggle.
+  testWidgets('Neumorphic Light and Dark theme tokens toggle cleanly',
+      (WidgetTester tester) async {
+    expect(EisTheme.light().extension<EisNeumorphicTokens>(), isNotNull);
+    expect(EisTheme.dark().extension<EisNeumorphicTokens>(), isNotNull);
+
+    tester.view.physicalSize = const Size(1280, 860);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(
+      IesApp(
+        initialThemeMode: ThemeMode.light,
+        apiClient: buildMockApiClient(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final scaffoldCtx = tester.element(find.byType(Scaffold));
+    expect(Theme.of(scaffoldCtx).brightness, Brightness.light);
+
+    await tester.tap(find.byIcon(Icons.dark_mode_rounded));
+    await tester.pumpAndSettle();
+
+    final updatedCtx = tester.element(find.byType(Scaffold));
+    expect(Theme.of(updatedCtx).brightness, Brightness.dark);
+    expect(find.byIcon(Icons.light_mode_rounded), findsOneWidget);
+  });
+
+  // Gene - Nov, 20, 2026: Verify responsive mobile viewport (390x844) renders NavigationBar and switches tabs without overflow.
+  testWidgets('Mobile viewport renders NavigationBar and switches tabs cleanly',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(IesApp(apiClient: buildMockApiClient()));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(NavigationBar), findsOneWidget);
+
+    for (final label in [
+      'Invoicing / POS',
+      'ERP Connectors',
+      'CAS 6 Books',
+      '.DAT & 2307',
+      'Vault & Audit',
+    ]) {
+      await tester.tap(find.text(label));
+      await tester.pumpAndSettle();
+    }
+
+    await tester.scrollUntilVisible(
+      find.text('CHAIN VERIFIED (1)'),
+      150,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(find.text('CHAIN VERIFIED (1)'), findsOneWidget);
   });
 }
 

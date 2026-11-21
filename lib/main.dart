@@ -11,6 +11,9 @@ import 'screens/invoicing_pos_screen.dart';
 import 'screens/statutory_reports_screen.dart';
 import 'screens/vault_audit_screen.dart';
 import 'services/ies_api_client.dart';
+// Gene - Nov, 20, 2026: Added modern Soft UI 2.0 neumorphic theme and widgets.
+import 'theme/eis_neumorphic_theme.dart';
+import 'widgets/neumorphic_widgets.dart';
 
 const _envRestUrl = String.fromEnvironment('EIS_REST_URL');
 const _envServerpodUrl = String.fromEnvironment('EIS_SERVERPOD_URL');
@@ -47,40 +50,112 @@ void main() {
   runApp(IesApp(apiClient: initialClient));
 }
 
-class IesApp extends StatelessWidget {
+// class IesApp extends StatelessWidget {
+//   final IesApiClient? apiClient;
+//
+//   const IesApp({super.key, this.apiClient});
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     return MaterialApp(
+//       title: 'IES — Philippine BIR EIS & CAS Compliance Hub',
+//       debugShowCheckedModeBanner: false,
+//       theme: ThemeData(
+//         useMaterial3: true,
+//         colorScheme: ColorScheme.fromSeed(
+//           seedColor: const Color(0xFF0F766E),
+//           brightness: Brightness.light,
+//         ),
+//       ),
+//       darkTheme: ThemeData(
+//         useMaterial3: true,
+//         colorScheme: ColorScheme.fromSeed(
+//           seedColor: const Color(0xFF14B8A6),
+//           brightness: Brightness.dark,
+//         ),
+//       ),
+//       themeMode: ThemeMode.system,
+//       home: IesHomeShell(api: apiClient ?? IesApiClient()),
+//     );
+//   }
+// }
+//
+// class IesHomeShell extends StatefulWidget {
+//   final IesApiClient api;
+//
+//   const IesHomeShell({super.key, required this.api});
+//
+//   @override
+//   State<IesHomeShell> createState() => _IesHomeShellState();
+// }
+// Gene - Nov, 20, 2026: Stateful IesApp with Soft Porcelain Light / Obsidian Slate Dark neumorphic themes and live theme switcher.
+class IesApp extends StatefulWidget {
   final IesApiClient? apiClient;
+  final ThemeMode initialThemeMode;
 
-  const IesApp({super.key, this.apiClient});
+  const IesApp({
+    super.key,
+    this.apiClient,
+    this.initialThemeMode = ThemeMode.system,
+  });
+
+  @override
+  State<IesApp> createState() => _IesAppState();
+}
+
+class _IesAppState extends State<IesApp> {
+  late ThemeMode _themeMode;
+
+  @override
+  void initState() {
+    super.initState();
+    _themeMode = widget.initialThemeMode;
+  }
+
+  @override
+  void didUpdateWidget(covariant IesApp oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialThemeMode != widget.initialThemeMode) {
+      _themeMode = widget.initialThemeMode;
+    }
+  }
+
+  void _toggleTheme(Brightness effectiveBrightness) {
+    setState(() {
+      _themeMode = effectiveBrightness == Brightness.dark
+          ? ThemeMode.light
+          : ThemeMode.dark;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'IES — Philippine BIR EIS & CAS Compliance Hub',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF0F766E),
-          brightness: Brightness.light,
-        ),
+      theme: EisTheme.light(),
+      darkTheme: EisTheme.dark(),
+      themeMode: _themeMode,
+      home: IesHomeShell(
+        api: widget.apiClient ?? IesApiClient(),
+        themeMode: _themeMode,
+        onToggleTheme: _toggleTheme,
       ),
-      darkTheme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF14B8A6),
-          brightness: Brightness.dark,
-        ),
-      ),
-      themeMode: ThemeMode.system,
-      home: IesHomeShell(api: apiClient ?? IesApiClient()),
     );
   }
 }
 
 class IesHomeShell extends StatefulWidget {
   final IesApiClient api;
+  final ThemeMode themeMode;
+  final ValueChanged<Brightness>? onToggleTheme;
 
-  const IesHomeShell({super.key, required this.api});
+  const IesHomeShell({
+    super.key,
+    required this.api,
+    this.themeMode = ThemeMode.system,
+    this.onToggleTheme,
+  });
 
   @override
   State<IesHomeShell> createState() => _IesHomeShellState();
@@ -195,25 +270,298 @@ class _IesHomeShellState extends State<IesHomeShell> {
     }
   }
 
+//   @override
+//   Widget build(BuildContext context) {
+//     final isWide = MediaQuery.sizeOf(context).width >= 820;
+//
+//     return Scaffold(
+//       appBar: AppBar(
+//         titleSpacing: 16,
+//         title: Row(
+//           children: [
+//             Icon(
+//               Icons.account_balance_wallet_rounded,
+//               color: Theme.of(context).colorScheme.primary,
+//             ),
+//             const SizedBox(width: 10),
+//             const Flexible(
+//               child: Text(
+//                 'IES • BIR EIS v2.01 & CAS Hub',
+//                 overflow: TextOverflow.ellipsis,
+//                 style: TextStyle(fontWeight: FontWeight.w700),
+//               ),
+//             ),
+//           ],
+//         ),
+//         actions: [
+//           Padding(
+//             padding: const EdgeInsets.only(right: 8),
+//             // Gene - Nov, 20, 2026: Display 3-mode icon and label (Local Engine / Serverpod RPC / REST API).
+//             child: ActionChip(
+//               avatar: Icon(
+//                 switch (_api.backendMode) {
+//                   EisBackendMode.embedded => Icons.memory_rounded,
+//                   EisBackendMode.serverpod => Icons.dns_rounded,
+//                   EisBackendMode.remoteRest => Icons.cloud_outlined,
+//                 },
+//                 size: 16,
+//               ),
+//               label: Text(
+//                 _api.modeChipLabel,
+//                 style: const TextStyle(fontSize: 12),
+//               ),
+//               tooltip: 'Backend Mode (${_api.connectionLabel})',
+//               onPressed: _openBackendModeDialog,
+//             ),
+//           ),
+//           if (_taxpayers.isNotEmpty)
+//             Padding(
+//               padding: const EdgeInsets.only(right: 8),
+//               child: DropdownButtonHideUnderline(
+//                 child: DropdownButton<String>(
+//                   value: _activeTaxpayer?.id,
+//                   items: _taxpayers
+//                       .map(
+//                         (tp) => DropdownMenuItem(
+//                           value: tp.id,
+//                           child: ConstrainedBox(
+//                             constraints: const BoxConstraints(maxWidth: 260),
+//                             child: Text(
+//                               '${tp.businessName} (TIN ${tp.tin})',
+//                               overflow: TextOverflow.ellipsis,
+//                             ),
+//                           ),
+//                         ),
+//                       )
+//                       .toList(),
+//                   onChanged: (id) {
+//                     if (id == null) return;
+//                     setState(() {
+//                       _activeTaxpayer =
+//                           _taxpayers.firstWhere((t) => t.id == id);
+//                     });
+//                     _refreshAll();
+//                   },
+//                 ),
+//               ),
+//             ),
+//           IconButton(
+//             tooltip: 'Refresh Data',
+//             onPressed: _refreshAll,
+//             icon: const Icon(Icons.refresh_rounded),
+//           ),
+//           const SizedBox(width: 8),
+//         ],
+//       ),
+//       body: Row(
+//         children: [
+//           if (isWide)
+//             NavigationRail(
+//               extended: MediaQuery.sizeOf(context).width >= 1150,
+//               selectedIndex: _selectedIndex,
+//               onDestinationSelected: (idx) =>
+//                   setState(() => _selectedIndex = idx),
+//               destinations: _destinations
+//                   .map(
+//                     (d) => NavigationRailDestination(
+//                       icon: Icon(d.icon),
+//                       selectedIcon: Icon(d.activeIcon),
+//                       label: Text(d.label),
+//                     ),
+//                   )
+//                   .toList(),
+//             ),
+//           Expanded(
+//             child: _error != null
+//                 ? Center(
+//                     child: Padding(
+//                       padding: const EdgeInsets.all(24),
+//                       child: Column(
+//                         mainAxisSize: MainAxisSize.min,
+//                         children: [
+//                           Icon(
+//                             Icons.cloud_off_rounded,
+//                             size: 48,
+//                             color: Theme.of(context).colorScheme.error,
+//                           ),
+//                           const SizedBox(height: 12),
+//                           Text(
+//                             'Cannot load IES Data (${_api.connectionLabel})',
+//                             style: Theme.of(context).textTheme.titleMedium,
+//                             textAlign: TextAlign.center,
+//                           ),
+//                           const SizedBox(height: 6),
+//                           Text(
+//                             _error!,
+//                             textAlign: TextAlign.center,
+//                             style: const TextStyle(
+//                               fontFamily: 'monospace',
+//                               fontSize: 12,
+//                             ),
+//                           ),
+//                           const SizedBox(height: 16),
+//                           Wrap(
+//                             spacing: 12,
+//                             runSpacing: 8,
+//                             alignment: WrapAlignment.center,
+//                             children: [
+//                               FilledButton.icon(
+//                                 onPressed: _refreshAll,
+//                                 icon: const Icon(Icons.refresh_rounded),
+//                                 label: const Text('Retry'),
+//                               ),
+//                               OutlinedButton.icon(
+//                                 onPressed: _openBackendModeDialog,
+//                                 icon: const Icon(Icons.tune_rounded),
+//                                 label: const Text('Backend Mode'),
+//                               ),
+//                             ],
+//                           ),
+//                         ],
+//                       ),
+//                     ),
+//                   )
+//                 : _loading && _summary == null
+//                     ? const Center(child: CircularProgressIndicator())
+//                     : IndexedStack(
+//                         index: _selectedIndex,
+//                         children: [
+//                           CommandCenterScreen(
+//                             summary: _summary,
+//                             invoices: _invoices,
+//                             api: _api,
+//                             onRefresh: _refreshAll,
+//                           ),
+//                           InvoicingPosScreen(
+//                             activeTaxpayer: _activeTaxpayer,
+//                             api: _api,
+//                             onInvoiceCreated: _refreshAll,
+//                           ),
+//                           ConnectorsScreen(
+//                             activeTaxpayer: _activeTaxpayer,
+//                             api: _api,
+//                             onSynced: _refreshAll,
+//                           ),
+//                           CasBooksScreen(
+//                             activeTaxpayer: _activeTaxpayer,
+//                             api: _api,
+//                             refreshNonce: _refreshNonce,
+//                           ),
+//                           StatutoryReportsScreen(
+//                             activeTaxpayer: _activeTaxpayer,
+//                             invoices: _invoices,
+//                             api: _api,
+//                           ),
+//                           VaultAuditScreen(
+//                             taxpayers: _taxpayers,
+//                             api: _api,
+//                             onRefresh: _refreshAll,
+//                             refreshNonce: _refreshNonce,
+//                           ),
+//                         ],
+//                       ),
+//           ),
+//         ],
+//       ),
+//       bottomNavigationBar: isWide
+//           ? null
+//           : NavigationBar(
+//               selectedIndex: _selectedIndex,
+//               onDestinationSelected: (idx) =>
+//                   setState(() => _selectedIndex = idx),
+//               destinations: _destinations
+//                   .map(
+//                     (d) => NavigationDestination(
+//                       icon: Icon(d.icon),
+//                       selectedIcon: Icon(d.activeIcon),
+//                       label: d.label,
+//                     ),
+//                   )
+//                   .toList(),
+//             ),
+//     );
+//   }
+// Gene - Nov, 20, 2026: Modern neumorphic shell with sculpted header pills, floating rail/bottom dock, responsive taxpayer bar, and theme switcher.
+  Widget _buildTaxpayerDropdown(EisNeumorphicTokens tokens, {bool isExpanded = false}) {
+    return NeumorphicWell(
+      borderRadius: 12,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          isDense: true,
+          isExpanded: isExpanded,
+          value: _activeTaxpayer?.id,
+          dropdownColor: tokens.surfaceElevated,
+          style: TextStyle(
+            color: tokens.textPrimary,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
+          icon: Icon(
+            Icons.expand_more_rounded,
+            size: 18,
+            color: tokens.textSecondary,
+          ),
+          items: _taxpayers
+              .map(
+                (tp) => DropdownMenuItem(
+                  value: tp.id,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: isExpanded ? 400 : 230),
+                    child: Text(
+                      '${tp.businessName} (TIN ${tp.tin})',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+              )
+              .toList(),
+          onChanged: (id) {
+            if (id == null) return;
+            setState(() {
+              _activeTaxpayer = _taxpayers.firstWhere((t) => t.id == id);
+            });
+            _refreshAll();
+          },
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final isWide = MediaQuery.sizeOf(context).width >= 820;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final isWide = screenWidth >= 820;
+    final showInlineTaxpayer = screenWidth >= 780;
+    final tokens = EisNeumorphicTokens.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final modeIcon = switch (_api.backendMode) {
+      EisBackendMode.embedded => Icons.memory_rounded,
+      EisBackendMode.serverpod => Icons.dns_rounded,
+      EisBackendMode.remoteRest => Icons.cloud_outlined,
+    };
 
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 16,
+        toolbarHeight: 68,
         title: Row(
           children: [
-            Icon(
-              Icons.account_balance_wallet_rounded,
-              color: Theme.of(context).colorScheme.primary,
+            NeumorphicIconBadge(
+              icon: Icons.account_balance_wallet_rounded,
+              color: tokens.accentPrimary,
+              size: 36,
+              iconSize: 18,
             ),
             const SizedBox(width: 10),
-            const Flexible(
+            Flexible(
               child: Text(
                 'IES • BIR EIS v2.01 & CAS Hub',
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontWeight: FontWeight.w700),
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: tokens.textPrimary,
+                ),
               ),
             ),
           ],
@@ -221,200 +569,232 @@ class _IesHomeShellState extends State<IesHomeShell> {
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 8),
-            // child: ActionChip(
-            //   avatar: Icon(
-            //     _api.isEmbedded ? Icons.memory_rounded : Icons.cloud_outlined,
-            //     size: 16,
-            //   ),
-            //   label: Text(
-            //     _api.isEmbedded ? 'Local Engine' : 'REST API',
-            //     style: const TextStyle(fontSize: 12),
-            //   ),
-            //   tooltip: 'Backend Mode (${_api.connectionLabel})',
-            //   onPressed: _openBackendModeDialog,
-            // ),
-            // Gene - Nov, 20, 2026: Display 3-mode icon and label (Local Engine / Serverpod RPC / REST API).
-            child: ActionChip(
-              avatar: Icon(
-                switch (_api.backendMode) {
-                  EisBackendMode.embedded => Icons.memory_rounded,
-                  EisBackendMode.serverpod => Icons.dns_rounded,
-                  EisBackendMode.remoteRest => Icons.cloud_outlined,
-                },
-                size: 16,
-              ),
-              label: Text(
-                _api.modeChipLabel,
-                style: const TextStyle(fontSize: 12),
-              ),
+            child: NeumorphicTapPill(
               tooltip: 'Backend Mode (${_api.connectionLabel})',
-              onPressed: _openBackendModeDialog,
+              onTap: _openBackendModeDialog,
+              padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+              borderRadius: 12,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(modeIcon, size: 15, color: tokens.accentPrimary),
+                  const SizedBox(width: 6),
+                  Text(
+                    _api.modeChipLabel,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: tokens.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          if (_taxpayers.isNotEmpty)
+          if (showInlineTaxpayer && _taxpayers.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(right: 8),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: _activeTaxpayer?.id,
-                  items: _taxpayers
-                      .map(
-                        (tp) => DropdownMenuItem(
-                          value: tp.id,
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 260),
-                            child: Text(
-                              '${tp.businessName} (TIN ${tp.tin})',
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (id) {
-                    if (id == null) return;
-                    setState(() {
-                      _activeTaxpayer =
-                          _taxpayers.firstWhere((t) => t.id == id);
-                    });
-                    _refreshAll();
-                  },
+              child: _buildTaxpayerDropdown(tokens),
+            ),
+          if (widget.onToggleTheme != null)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: NeumorphicTapPill(
+                tooltip: isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode',
+                onTap: () => widget.onToggleTheme!(Theme.of(context).brightness),
+                padding: const EdgeInsets.all(8),
+                borderRadius: 12,
+                child: Icon(
+                  isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+                  size: 18,
+                  color: tokens.textPrimary,
                 ),
               ),
             ),
-          IconButton(
-            tooltip: 'Refresh Data',
-            onPressed: _refreshAll,
-            icon: const Icon(Icons.refresh_rounded),
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: NeumorphicTapPill(
+              tooltip: 'Refresh Data',
+              onTap: _refreshAll,
+              padding: const EdgeInsets.all(8),
+              borderRadius: 12,
+              child: Icon(
+                Icons.refresh_rounded,
+                size: 18,
+                color: tokens.textPrimary,
+              ),
+            ),
           ),
-          const SizedBox(width: 8),
         ],
       ),
-      body: Row(
+      body: Column(
         children: [
-          if (isWide)
-            NavigationRail(
-              extended: MediaQuery.sizeOf(context).width >= 1150,
-              selectedIndex: _selectedIndex,
-              onDestinationSelected: (idx) =>
-                  setState(() => _selectedIndex = idx),
-              destinations: _destinations
-                  .map(
-                    (d) => NavigationRailDestination(
-                      icon: Icon(d.icon),
-                      selectedIcon: Icon(d.activeIcon),
-                      label: Text(d.label),
-                    ),
-                  )
-                  .toList(),
+          if (!showInlineTaxpayer && _taxpayers.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: _buildTaxpayerDropdown(tokens, isExpanded: true),
             ),
           Expanded(
-            child: _error != null
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.cloud_off_rounded,
-                            size: 48,
-                            color: Theme.of(context).colorScheme.error,
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'Cannot load IES Data (${_api.connectionLabel})',
-                            style: Theme.of(context).textTheme.titleMedium,
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            _error!,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontFamily: 'monospace',
-                              fontSize: 12,
+            child: Row(
+              children: [
+                if (isWide)
+                  NeumorphicSurface(
+                    depth: NeumorphicDepth.raised,
+                    borderRadius: 22,
+                    margin: const EdgeInsets.fromLTRB(16, 8, 4, 16),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: NavigationRail(
+                      extended: screenWidth >= 1150,
+                      selectedIndex: _selectedIndex,
+                      onDestinationSelected: (idx) =>
+                          setState(() => _selectedIndex = idx),
+                      destinations: _destinations
+                          .map(
+                            (d) => NavigationRailDestination(
+                              icon: Icon(d.icon),
+                              selectedIcon: Icon(d.activeIcon),
+                              label: Text(d.label),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  ),
+                Expanded(
+                  child: _error != null
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 520),
+                              child: NeumorphicSurface(
+                                depth: NeumorphicDepth.raised,
+                                borderRadius: 22,
+                                padding: const EdgeInsets.all(24),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    NeumorphicIconBadge(
+                                      icon: Icons.cloud_off_rounded,
+                                      color: tokens.danger,
+                                      size: 54,
+                                      iconSize: 28,
+                                    ),
+                                    const SizedBox(height: 14),
+                                    Text(
+                                      'Cannot load IES Data (${_api.connectionLabel})',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium
+                                          ?.copyWith(fontWeight: FontWeight.w700),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    const SizedBox(height: 10),
+                                    NeumorphicWell(
+                                      padding: const EdgeInsets.all(12),
+                                      child: Text(
+                                        _error!,
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                          fontFamily: 'monospace',
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Wrap(
+                                      spacing: 12,
+                                      runSpacing: 8,
+                                      alignment: WrapAlignment.center,
+                                      children: [
+                                        FilledButton.icon(
+                                          onPressed: _refreshAll,
+                                          icon: const Icon(Icons.refresh_rounded),
+                                          label: const Text('Retry'),
+                                        ),
+                                        OutlinedButton.icon(
+                                          onPressed: _openBackendModeDialog,
+                                          icon: const Icon(Icons.tune_rounded),
+                                          label: const Text('Backend Mode'),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
                           ),
-                          const SizedBox(height: 16),
-                          Wrap(
-                            spacing: 12,
-                            runSpacing: 8,
-                            alignment: WrapAlignment.center,
-                            children: [
-                              FilledButton.icon(
-                                onPressed: _refreshAll,
-                                icon: const Icon(Icons.refresh_rounded),
-                                label: const Text('Retry'),
-                              ),
-                              OutlinedButton.icon(
-                                onPressed: _openBackendModeDialog,
-                                icon: const Icon(Icons.tune_rounded),
-                                label: const Text('Backend Mode'),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                : _loading && _summary == null
-                    ? const Center(child: CircularProgressIndicator())
-                    : IndexedStack(
-                        index: _selectedIndex,
-                        children: [
-                          CommandCenterScreen(
-                            summary: _summary,
-                            invoices: _invoices,
-                            api: _api,
-                            onRefresh: _refreshAll,
-                          ),
-                          InvoicingPosScreen(
-                            activeTaxpayer: _activeTaxpayer,
-                            api: _api,
-                            onInvoiceCreated: _refreshAll,
-                          ),
-                          ConnectorsScreen(
-                            activeTaxpayer: _activeTaxpayer,
-                            api: _api,
-                            onSynced: _refreshAll,
-                          ),
-                          CasBooksScreen(
-                            activeTaxpayer: _activeTaxpayer,
-                            api: _api,
-                            refreshNonce: _refreshNonce,
-                          ),
-                          StatutoryReportsScreen(
-                            activeTaxpayer: _activeTaxpayer,
-                            invoices: _invoices,
-                            api: _api,
-                          ),
-                          VaultAuditScreen(
-                            taxpayers: _taxpayers,
-                            api: _api,
-                            onRefresh: _refreshAll,
-                            refreshNonce: _refreshNonce,
-                          ),
-                        ],
-                      ),
+                        )
+                      : _loading && _summary == null
+                          ? const Center(child: CircularProgressIndicator())
+                          : IndexedStack(
+                              index: _selectedIndex,
+                              children: [
+                                CommandCenterScreen(
+                                  summary: _summary,
+                                  invoices: _invoices,
+                                  api: _api,
+                                  onRefresh: _refreshAll,
+                                ),
+                                InvoicingPosScreen(
+                                  activeTaxpayer: _activeTaxpayer,
+                                  api: _api,
+                                  onInvoiceCreated: _refreshAll,
+                                ),
+                                ConnectorsScreen(
+                                  activeTaxpayer: _activeTaxpayer,
+                                  api: _api,
+                                  onSynced: _refreshAll,
+                                ),
+                                CasBooksScreen(
+                                  activeTaxpayer: _activeTaxpayer,
+                                  api: _api,
+                                  refreshNonce: _refreshNonce,
+                                ),
+                                StatutoryReportsScreen(
+                                  activeTaxpayer: _activeTaxpayer,
+                                  invoices: _invoices,
+                                  api: _api,
+                                ),
+                                VaultAuditScreen(
+                                  taxpayers: _taxpayers,
+                                  api: _api,
+                                  onRefresh: _refreshAll,
+                                  refreshNonce: _refreshNonce,
+                                ),
+                              ],
+                            ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
       bottomNavigationBar: isWide
           ? null
-          : NavigationBar(
-              selectedIndex: _selectedIndex,
-              onDestinationSelected: (idx) =>
-                  setState(() => _selectedIndex = idx),
-              destinations: _destinations
-                  .map(
-                    (d) => NavigationDestination(
-                      icon: Icon(d.icon),
-                      selectedIcon: Icon(d.activeIcon),
-                      label: d.label,
-                    ),
-                  )
-                  .toList(),
+          : SafeArea(
+              top: false,
+              child: NeumorphicSurface(
+                depth: NeumorphicDepth.raised,
+                borderRadius: 22,
+                margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(22),
+                  child: NavigationBar(
+                    selectedIndex: _selectedIndex,
+                    onDestinationSelected: (idx) =>
+                        setState(() => _selectedIndex = idx),
+                    destinations: _destinations
+                        .map(
+                          (d) => NavigationDestination(
+                            icon: Icon(d.icon),
+                            selectedIcon: Icon(d.activeIcon),
+                            label: d.label,
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ),
+              ),
             ),
     );
   }
@@ -567,10 +947,11 @@ class _BackendModeDialogState extends State<_BackendModeDialog> {
       title: const Text('Backend Execution Mode'),
       content: SizedBox(
         width: 480,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             SegmentedButton<EisBackendMode>(
               segments: const [
                 ButtonSegment(
@@ -593,10 +974,48 @@ class _BackendModeDialogState extends State<_BackendModeDialog> {
               onSelectionChanged: (sel) => _onModeChanged(sel.first),
             ),
             const SizedBox(height: 14),
+//             if (_mode == EisBackendMode.embedded)
+//               Text(
+//                 'Runs the full pure-Dart BIR EIS v2.01 (RSA-2048 JWS, AES-256-GCM, EOPT, 6 CAS Books, .DAT/2307 & Annex B Hash Chain) directly inside this Flutter app.',
+//                 style: Theme.of(context).textTheme.bodySmall,
+//               )
+//             else if (_mode == EisBackendMode.serverpod) ...[
+//               TextField(
+//                 controller: _urlCtrl,
+//                 decoration: const InputDecoration(
+//                   labelText: 'Serverpod RPC URL',
+//                   hintText: 'http://localhost:8080/',
+//                   border: OutlineInputBorder(),
+//                 ),
+//               ),
+//               const SizedBox(height: 8),
+//               Text(
+//                 'Start backend: cd server/eis_server && dart bin/main.dart (localhost auto-maps to 10.0.2.2 on Android Emulator).',
+//                 style: Theme.of(context).textTheme.bodySmall,
+//               ),
+//             ] else ...[
+//               TextField(
+//                 controller: _urlCtrl,
+//                 decoration: const InputDecoration(
+//                   labelText: 'REST Bridge Base URL',
+//                   hintText: 'http://localhost:4000',
+//                   border: OutlineInputBorder(),
+//                 ),
+//               ),
+//               const SizedBox(height: 8),
+//               Text(
+//                 'Tip: On Android Emulator use http://10.0.2.2:4000 to reach a local eis_server REST bridge.',
+//                 style: Theme.of(context).textTheme.bodySmall,
+//               ),
+//             ],
+            // Gene - Nov, 20, 2026: Wrap mode descriptions and backend tips inside recessed NeumorphicWell containers.
             if (_mode == EisBackendMode.embedded)
-              Text(
-                'Runs the full pure-Dart BIR EIS v2.01 (RSA-2048 JWS, AES-256-GCM, EOPT, 6 CAS Books, .DAT/2307 & Annex B Hash Chain) directly inside this Flutter app.',
-                style: Theme.of(context).textTheme.bodySmall,
+              NeumorphicWell(
+                padding: const EdgeInsets.all(14),
+                child: Text(
+                  'Runs the full pure-Dart BIR EIS v2.01 (RSA-2048 JWS, AES-256-GCM, EOPT, 6 CAS Books, .DAT/2307 & Annex B Hash Chain) directly inside this Flutter app.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
               )
             else if (_mode == EisBackendMode.serverpod) ...[
               TextField(
@@ -607,10 +1026,13 @@ class _BackendModeDialogState extends State<_BackendModeDialog> {
                   border: OutlineInputBorder(),
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Start backend: cd server/eis_server && dart bin/main.dart (localhost auto-maps to 10.0.2.2 on Android Emulator).',
-                style: Theme.of(context).textTheme.bodySmall,
+              const SizedBox(height: 10),
+              NeumorphicWell(
+                padding: const EdgeInsets.all(12),
+                child: Text(
+                  'Start backend: cd server/eis_server && dart bin/main.dart (localhost auto-maps to 10.0.2.2 on Android Emulator).',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
               ),
             ] else ...[
               TextField(
@@ -621,13 +1043,17 @@ class _BackendModeDialogState extends State<_BackendModeDialog> {
                   border: OutlineInputBorder(),
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Tip: On Android Emulator use http://10.0.2.2:4000 to reach a local eis_server REST bridge.',
-                style: Theme.of(context).textTheme.bodySmall,
+              const SizedBox(height: 10),
+              NeumorphicWell(
+                padding: const EdgeInsets.all(12),
+                child: Text(
+                  'Tip: On Android Emulator use http://10.0.2.2:4000 to reach a local eis_server REST bridge.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
               ),
             ],
           ],
+          ),
         ),
       ),
       actions: [
