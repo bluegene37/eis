@@ -4,7 +4,9 @@ name: eis
 # description: "A new Flutter project."
 # Gene - Nov, 20, 2026: Standalone Philippine BIR EIS v2.01 & CAS Flutter platform.
 # description: "EIS v2 — Standalone Philippine BIR EIS v2.01 & CAS Compliance Platform."
-description: "EIS — Philippine BIR EIS v2.01 & CAS Compliance Platform (Flutter + Serverpod)."
+# description: "EIS — Philippine BIR EIS v2.01 & CAS Compliance Platform (Flutter + Serverpod)."
+# Gene - Nov, 24, 2026: Migrated backend from Serverpod to Supabase while keeping Local Embedded Engine.
+description: "EIS — Philippine BIR EIS v2.01 & CAS Compliance Platform (Flutter + Supabase)."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -27,9 +29,10 @@ environment:
   sdk: ^3.14.0
 
 # Gene - Nov, 20, 2026: Share Dart workspace across root Flutter app and nested Serverpod server/client packages.
-workspace:
-  - server/eis_server
-  - server/eis_client
+# Gene - Nov, 24, 2026: Unlinked legacy Serverpod packages from Dart workspace during Supabase migration.
+# workspace:
+#   - server/eis_server
+#   - server/eis_client
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -41,9 +44,11 @@ dependencies:
   flutter:
     sdk: flutter
   # Gene - Nov, 20, 2026: Added Serverpod 4.1.2 Flutter integration and generated eis_client package.
-  eis_client:
-    path: server/eis_client
-  serverpod_flutter: 4.1.2
+  # Gene - Nov, 24, 2026: Replaced Serverpod client dependencies with supabase_flutter.
+  # eis_client:
+  #   path: server/eis_client
+  # serverpod_flutter: 4.1.2
+  supabase_flutter: ^2.10.0
   material_ui: ^1.1.0
 
   # The following adds the Cupertino Icons font to your application.

@@ -1,3 +1,5 @@
 {
-    "apiUrl": "http://localhost:8080"
+    "_comment": "Gene - Nov, 24, 2026: Replaced legacy Serverpod apiUrl (http://localhost:8080) with non-secret Supabase config placeholders.",
+    "supabaseUrl": "",
+    "supabasePublishableKey": ""
 }

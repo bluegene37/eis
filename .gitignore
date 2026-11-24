@@ -99,3 +99,10 @@ key.properties
 **/google-services.json
 **/GoogleService-Info.plist
 server/eis_server/config/firebase_service_account_key.json
+
+# Gene - Nov, 24, 2026: Ignore local Supabase secrets and ephemeral state while keeping supabase/.env.example tracked.
+supabase/.env
+supabase/.env.*
+!supabase/.env.example
+supabase/.temp/
+supabase/.branches/

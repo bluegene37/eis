@@ -1,7 +1,7 @@
-<!-- Gene - Nov, 20, 2026: Updated README for unified EIS repository (Flutter app at root + nested Serverpod 4.1.2 backend under server/). -->
+<!-- Gene - Nov, 24, 2026: Updated README for Flutter + Supabase backend migration (retaining legacy Serverpod README archived in HTML comments below). -->
 # EIS — Philippine Accounting Integration & BIR Electronic Invoicing System
 
-> **Pure-Dart Flutter + Serverpod 4.1.2 Platform** — Universal **BIR Electronic Invoicing System (EIS v2.01)** Middleware, **Computerized Accounting System (CAS)** Compliance Hub, and **Multi-Platform Invoicing/POS UI** supporting **Embedded Local**, **Serverpod RPC (`:8080`)**, and **REST Webhook (`:4000`)** execution modes.
+> **Flutter + Supabase Platform** — Universal **BIR Electronic Invoicing System (EIS v2.01)** Middleware, **Computerized Accounting System (CAS)** Compliance Hub, and **Multi-Platform Invoicing/POS UI** supporting **Embedded Local Engine**, **Supabase** (Cloud or Self-Hosted PostgreSQL + Auth/RBAC + Edge Functions), and **Remote REST** execution modes.
 
 **Repository:** `https://github.com/bluegene37/eis.git`
 
@@ -11,163 +11,137 @@
 
 | Standard / Regulation | Implemented Coverage |
 | :--- | :--- |
-| **BIR EIS JSON Schema v2.01** (`RR 11-2025` / `RR 26-2025`) | `CAS` and `CRM/POS` schema profiles, 24-character `EisUniqueId` (`YYYYMMDD` + 8-char `EisCertId` + 8-digit gapless sequence), Seller/Buyer TIN & 4-digit `BranchCd` validation, and `ACK-200` / `SYN004` / `VAL001` / `DUP001` / `SEC001` handling |
-| **EOPT Act** (`RA 11976` & `RR No. 7-2024`) | Sales Invoice (`01`), Service Invoice (`02`), Credit Memo (`03`, `CorrYN = "Y"`), Debit Memo (`04`); 12% `VATABLE`, `VAT_EXEMPT` (including Senior Citizen & PWD 20% statutory discounts), and `ZERO_RATED` breakdowns; B2B buyer TIN validation |
+| **BIR EIS JSON Schema v2.01** (`RR 11-2025` / `RR 26-2025`) | `CAS` and `CRM/POS` schema profiles, 24-character `EisUniqueId` (`YYYYMMDD` + 8-char `EisCertId` + 8-digit atomic gapless sequence via Postgres row locking), Seller/Buyer TIN & 4-digit `BranchCd` validation, and `ACK-200` / `SYN004` / `VAL001` / `DUP001` / `SEC001` handling |
+| **EOPT Act** (`RA 11976` & `RR No. 7-2024`) | Sales Invoice (`01`), Service Invoice (`02`), Credit Memo (`03`, `CorrYN = "Y"`), Debit Memo (`04`); exact integer-centavo 12% `VATABLE`, `VAT_EXEMPT` (including Senior Citizen & PWD 20% statutory discounts), and `ZERO_RATED` breakdowns; B2B buyer TIN validation |
 | **Withholding Tax / CWT** (`RR No. 6-2026`) | Built-in BIR ATC catalog (`WI010`, `WI011`, `WC010`, `WC011`, `WI158`, `WC158`, `WI160`, `WC160`, `WC100`), line-item & invoice net payable math, and **BIR Form 2307** certificate generation |
-| **Pure-Dart Cryptography** (`pointycastle` + `crypto`) | Per-TIN RSA-2048 keypair vault, **RFC 7515 JWS (`RS256`)** digital signatures, and **AES-256-GCM** encrypted payload envelopes |
-| **3-Tier BIR Gateway & 3-Day Queue** | 1) Built-in Spec-Faithful BIR EIS Simulator (`MOCK_BIR_SIMULATOR`), 2) Certification Sandbox (`eis-cert.bir.gov.ph`), 3) Live Production (`eis.bir.gov.ph`), plus 3-calendar-day outage retry queue |
-| **BIR CAS Books of Accounts** (`RR No. 9-2009` & `PFRS`) | Automatic balanced double-entry posting across all **6 Mandatory Books**: `GJ`, `GL`, `SJ`, `PJ`, `CRJ`, and `CDJ`, plus real-time PFRS Trial Balance |
-| **Statutory Exports & Annex B** (`RMC 5-2021` / `RMO 9-2021`) | BIR RELIEF **SLSP** (Sales & Purchases `.DAT`/`.CSV`), **SAWT** (`.DAT`/`.CSV`), **QAP 1601-EQ** (`.DAT`/`.CSV`), **BIR Form 2307**, and SHA-256 hash-chained **Annex B Immutable Audit Trail** |
+| **Private Key Vault & Cryptography** | Non-exposed `private.taxpayer_secrets` vault (AES-256-GCM master-key encrypted at rest), per-TIN RSA-2048 keys, **RFC 7515 JWS (`RS256`)**, and **AES-256-GCM** BIR payload envelopes |
+| **3-Tier BIR Gateway & 3-Day Queue** | 1) Built-in Spec-Faithful BIR EIS Simulator (`MOCK_BIR_SIMULATOR`), 2) Certification Sandbox (`eis-cert.bir.gov.ph`), 3) Live Production (`eis.bir.gov.ph`) with optional `BIR_EGRESS_PROXY_URL` static-IP routing, plus `pg_cron` 3-calendar-day retry worker (`eis-retry-worker`) |
+| **BIR CAS Books of Accounts** (`RR No. 9-2009` & `PFRS`) | Automatic balanced double-entry posting (`numeric(18,2)`) across all **6 Mandatory Books**: `GJ`, `GL`, `SJ`, `PJ`, `CRJ`, and `CDJ`, backed by PostgreSQL append-only immutability triggers (`BEFORE UPDATE OR DELETE`) |
+| **Statutory Exports & Annex B** (`RMC 5-2021` / `RMO 9-2021`) | BIR RELIEF **SLSP**, **SAWT**, **QAP 1601-EQ** `.DAT`/`.CSV`, **BIR Form 2307**, private `eis-exports` Storage archive bucket (10-year retention), and advisory-locked SHA-256 hash-chained **Annex B Immutable Audit Trail** |
+| **Multi-Tenant Auth & 5-Role RBAC** | Supabase Auth (Email/Password), Row-Level Security (RLS) on every `public` table, and workspace roles: `admin`, `accountant`, `cashier`, `auditor`, `security_officer` |
 
 ---
 
 ## Architecture & Workspace Structure
 
 ```text
-eis/                              # Flutter app root (`name: eis`, Dart workspace root)
-├── pubspec.yaml                  # Root Flutter package + Dart workspace (`server/eis_server`, `server/eis_client`)
-├── assets/config.json            # Default Serverpod client URL (`http://localhost:8080`)
+eis/                                  # Flutter app root (`name: eis`)
+├── pubspec.yaml                      # Root Flutter dependencies (`supabase_flutter`, `pointycastle`, etc.)
+├── assets/config.json                # Non-secret Supabase placeholder config
 ├── lib/
-│   ├── main.dart                 # 3-mode UI shell (Local / Serverpod RPC / REST)
-│   ├── core/bir/                 # Embedded pure-Dart BIR EIS v2.01, EOPT, CAS & persistence (`eis_store.json`)
-│   ├── models/                   # UI view models & EOPT preview math
-│   ├── screens/                  # 6 compliance workspaces (Command, POS, Connectors, CAS, .DAT/2307, Vault)
-│   ├── services/                 # `IesApiClient` (Embedded + Serverpod RPC + REST transport)
-│   └── widgets/                  # Shared Material 3 UI components
-├── test/                         # Flutter unit (`eis_engine_test.dart`) & widget (`widget_test.dart`) suites
-└── server/
-    ├── eis_server/               # Serverpod 4.1.2 backend (:8080 RPC + :4000 REST webhook bridge)
-    │   ├── bin/main.dart         # Serverpod entrypoint
-    │   ├── lib/server.dart       # Starts Serverpod (:8080) + REST webhook bridge (:4000)
-    │   ├── lib/src/endpoints/    # `eis_endpoint.dart` (typed Serverpod RPC endpoint)
-    │   ├── lib/src/bir/          # Server-side BIR EIS v2.01, CAS, .DAT/2307 & ERP bridge services
-    │   └── test/                 # Engine tests & `withServerpod` RPC integration tests
-    ├── eis_client/               # Auto-generated Serverpod RPC client (`client.eis.*`)
-    └── docker-compose.yml        # Optional PostgreSQL 16 + Redis 7 for production scaling
+│   ├── main.dart                     # 3-mode UI shell (Local / Supabase / REST) + Workspace RBAC dialog
+│   ├── core/bir/                     # Embedded pure-Dart BIR EIS v2.01, EOPT, CAS & local JSON fallback
+│   ├── models/                       # Compliance models (`ies_models.dart`) + RBAC models (`workspace_models.dart`)
+│   ├── screens/                      # 6 compliance workspaces + `supabase_auth_screen.dart`
+│   ├── services/                     # `IesApiClient` + `SupabaseEisTransport` (PostgREST + Edge Functions)
+│   └── widgets/                      # Shared Soft UI 2.0 Material 3 components
+├── supabase/
+│   ├── config.toml                   # Local Supabase CLI project config (`project_id = "eis"`)
+│   ├── .env.example                  # Secret template (`EIS_VAULT_MASTER_KEY`, `EIS_CRON_SECRET`, etc.)
+│   ├── migrations/
+│   │   ├── 20261124000001_initial_eis_schema.sql
+│   │   └── 20261124000002_storage_and_retry_cron.sql
+│   └── functions/                    # 6 Deno Edge Functions + `_shared/` BIR compliance engine
+│       ├── eis-workspace/            # Workspace bootstrap, RBAC roster, dashboard, gateway config, webhook keys
+│       ├── eis-taxpayers/            # Multi-TIN registration, branches, RSA/AES key rotation
+│       ├── eis-invoices/             # Invoice ingestion, Credit Memo (DocType 03), manual retry flush
+│       ├── eis-connectors/           # Xero, QuickBooks, Odoo & CSV ingestion (JWT or X-EIS-API-Key)
+│       ├── eis-reports/              # SLSP, SAWT, QAP 1601-EQ, Form 2307 + Storage archival
+│       └── eis-retry-worker/         # Scheduled 3-day SLA retry worker (pg_cron + EIS_CRON_SECRET)
+├── test/                             # `eis_engine_test.dart`, `widget_test.dart`, `supabase_client_test.dart`
+└── server/                           # Archived legacy Serverpod 4.1.2 backend (unlinked from pubspec.yaml)
 ```
 
 ---
 
 ## 3 Execution Modes
 
-Switch modes anytime via the top-right **Backend Mode** chip in the app bar (`Local Engine`, `Serverpod RPC`, or `REST API`), or pass a launch flag:
+Switch modes anytime via the top-right **Backend Mode** chip (`Local Engine`, `Supabase`, or `REST API`), or pass `--dart-define` launch flags:
 
 | Mode | How to Activate | Transport & Storage |
 | :--- | :--- | :--- |
-| **Local Embedded Engine** *(default)* | `flutter run` | Runs the full pure-Dart BIR EIS & CAS engine directly inside Flutter (`ApplicationSupportDirectory/eis_store.json` on native, in-memory on Web). No server required. |
-| **Serverpod RPC (`:8080`)** | `flutter run --dart-define=EIS_SERVERPOD_URL=http://localhost:8080` | Calls `server/eis_server` over typed `eis_client` RPC (`localhost` auto-maps to `10.0.2.2` on Android Emulator). |
-| **Remote REST Bridge (`:4000`)** | `flutter run --dart-define=EIS_REST_URL=http://localhost:4000` | Calls the JSON REST bridge running inside `eis_server` on `:4000`. |
+| **Local Embedded Engine** *(default)* | `flutter run` | Runs the pure-Dart BIR EIS & CAS engine directly inside Flutter (`eis_store.json` on native, in-memory on Web) for offline demos/tests. |
+| **Supabase** *(Recommended for clients)* | `flutter run --dart-define=SUPABASE_URL=https://<your-project-ref>.supabase.co --dart-define=SUPABASE_PUBLISHABLE_KEY=<your-publishable-key>` | Connects to Supabase Auth, RLS-protected PostgreSQL, encrypted private key vault, Storage archive, and Edge Functions. |
+| **Remote REST Bridge** | `flutter run --dart-define=EIS_REST_URL=http://localhost:4000` | Connects to an external JSON REST bridge exposing `/api/*`. |
 
 ---
 
-## Quick Start & Testing
+## Quick Start, Local Supabase Dev & Client Deployment
 
-### 1. Resolve Workspace Dependencies
+### 1. Run Flutter Tests & App Locally
 ```bash
 git clone https://github.com/bluegene37/eis.git
 cd eis
 flutter pub get
-```
-*(Resolves the root `eis` Flutter app along with `server/eis_server` and `server/eis_client` in one Dart workspace.)*
-
-### 2. Test & Run the Serverpod Backend (`server/eis_server`)
-`eis_server` runs in **Serverpod Mini** mode (JSON persistence under `server/eis_server/data/eis_store.json`), so **Docker is not required** to run or test locally. Optional Postgres 16 + Redis 7 containers are available in `server/docker-compose.yml`.
-
-```bash
-cd server/eis_server
-dart analyze
-dart test            # Runs engine unit tests + withServerpod RPC integration tests
-dart bin/main.dart   # Starts Serverpod RPC (:8080) & REST/Webhook Bridge (:4000)
-```
-
-Verify the running backend from another terminal:
-```bash
-# REST bridge health check (:4000)
-curl http://localhost:4000/api/health
-
-# Dashboard summary (:4000)
-curl http://localhost:4000/api/dashboard/summary
-
-# Serverpod RPC greeting endpoint (:8080)
-curl -X POST http://localhost:8080/greeting \
-  -H "Content-Type: application/json" \
-  -d '{"method":"hello","name":"Gene"}'
-```
-
-### 3. Regenerate Serverpod Client/Protocol Code
-Run after modifying any endpoint under `server/eis_server/lib/src/endpoints/` or `*.spy.yaml`:
-```bash
-cd server/eis_server
-serverpod generate
-```
-
-### 4. Test & Run the Flutter App (`eis`)
-```bash
-# From repo root:
 flutter analyze
 flutter test
-
-# Standalone (Embedded Local Engine):
 flutter run
-
-# Connected to Serverpod RPC (:8080):
-flutter run --dart-define=EIS_SERVERPOD_URL=http://localhost:8080
-
-# Connected to Serverpod REST Bridge (:4000):
-flutter run --dart-define=EIS_REST_URL=http://localhost:4000
 ```
+
+### 2. Local Supabase Stack (Requires Docker Desktop / OrbStack)
+```bash
+# 1) Create local Edge Function secrets from template (never commit supabase/.env)
+cp supabase/.env.example supabase/.env
+# Edit supabase/.env and generate real random hex keys:
+#   EIS_VAULT_MASTER_KEY=$(openssl rand -hex 32)
+#   EIS_CRON_SECRET=$(openssl rand -hex 24)
+
+# 2) Start local Postgres, Auth, Storage, Studio, and Edge Runtime
+supabase start
+supabase db reset
+
+# 3) Serve Edge Functions locally
+supabase functions serve --env-file supabase/.env
+```
+Then launch Flutter pointing at local Supabase (`supabase status` prints your local publishable/anon key):
+```bash
+flutter run \
+  --dart-define=SUPABASE_URL=http://127.0.0.1:54321 \
+  --dart-define=SUPABASE_PUBLISHABLE_KEY=<your-local-publishable-key>
+```
+
+### 3. Deploy to Supabase Cloud (or Self-Hosted Client Server)
+For **Supabase Cloud**:
+```bash
+supabase login
+supabase link --project-ref <your-project-ref>
+
+# Configure required production secrets (omit EIS_ALLOW_DEV_VAULT_FALLBACK in production!)
+supabase secrets set \
+  EIS_VAULT_MASTER_KEY=<64-hex-char-master-key> \
+  EIS_CRON_SECRET=<random-cron-bearer-secret>
+
+# Push database migrations & deploy all 6 Edge Functions
+supabase db push
+supabase functions deploy eis-workspace eis-taxpayers eis-invoices eis-connectors eis-reports eis-retry-worker
+```
+To activate the automatic 5-minute `pg_cron` 3-day SLA retry worker in Supabase Cloud / Self-Hosted Postgres, add two **Vault** secrets in Supabase Dashboard → Integrations → Vault:
+- `supabase_url`: `https://<your-project-ref>.supabase.co`
+- `eis_cron_secret`: exact same `<random-cron-bearer-secret>` set above.
+
+For **On-Premise Client Installations** (offline-resilient POS / LAN servers): run the official **Self-Hosted Supabase Docker** stack on the client's Linux/Windows server, run the SQL files in `supabase/migrations/` and deploy `supabase/functions/` to the local Edge Runtime. When a client activates a live BIR PTT (`BIR_CERT_SANDBOX` / `BIR_PRODUCTION`), configure `BIR_EGRESS_PROXY_URL` if outbound traffic must pass through a whitelisted static-IP VPN/proxy.
 
 ---
 
-## Serverpod RPC & REST Webhook Endpoints
-
-Every capability is exposed both via typed Serverpod RPC (`client.eis.*` on port `8080`) and via JSON REST endpoints on port `4000`:
-
-| Serverpod RPC (`client.eis.*`) | REST Bridge (`:4000`) | Purpose |
-| :--- | :--- | :--- |
-| `getDashboardSummary` | `GET /api/dashboard/summary` | KPI totals, gateway mode, Output VAT, CWT, and Annex B chain status |
-| `updateGatewayConfig` | `POST /api/gateway/config` | Switch BIR gateway (`MOCK_BIR_SIMULATOR`, `BIR_CERT_SANDBOX`, `BIR_PRODUCTION`) or toggle outage test |
-| `getTaxpayers` / `registerTaxpayer` | `GET / POST /api/taxpayers` | Manage Multi-TIN / Branch profiles with RSA-2048 & AES-256 keys |
-| `rotateTaxpayerKeys` | `POST /api/taxpayers/:id/rotate-keys` | Rotate Taxpayer JWS RSA-2048 & AES-256 keys |
-| `getInvoices` / `createInvoice` | `GET / POST /api/invoices` | Ingest, EOPT-calculate, JWS-sign, AES-encrypt, and transmit to BIR EIS |
-| `processRetryQueue` | `POST /api/invoices/retry-queue` | Flush `QUEUED_RETRY` invoices within the 3-day SLA |
-| `issueCreditMemo` | `POST /api/invoices/:id/credit-memo` | Issue a BIR `DocType "03"` Credit Memo (`CorrYN = "Y"`) |
-| `syncConnector` | `POST /api/connectors/{xero,quickbooks,odoo}` | Map external ERP invoices/bills into BIR EIS v2.01 & CAS Books |
-| `importCsvBatch` | `POST /api/connectors/csv` | Batch import CSV invoices into BIR EIS + CAS Books |
-| `getCasBooks` | `GET /api/cas/books` | Query the 6 Mandatory BIR Books (`GJ`, `GL`, `SJ`, `PJ`, `CRJ`, `CDJ`) + Trial Balance |
-| `generateSlsp` | `GET /api/statutory/slsp` | Generate BIR RELIEF SLSP (`SALES` / `PURCHASES`) `.DAT` & `.CSV` |
-| `generateWithholdingDat` | `GET /api/statutory/withholding` | Generate BIR `SAWT` or `QAP` (1601-EQ) `.DAT` & `.CSV` |
-| `generateForm2307` | `GET /api/statutory/form2307/:invoiceId` | Generate BIR Form 2307 data & printable HTML certificate |
-| `getAuditTrail` | `GET /api/audit-trail` | Inspect RMC 5-2021 Annex B SHA-256 hash-chained audit trail |
-
 <!--
-Gene - Nov, 20, 2026: Previous standalone eis_v2 README preserved below:
+Gene - Nov, 24, 2026: Previous Serverpod 4.1.2 README preserved below per Code Modification & Deprecation Policy:
 
-# EIS v2 — Philippine BIR EIS v2.01 & CAS Compliance Hub (Standalone Flutter App)
+# EIS — Philippine Accounting Integration & BIR Electronic Invoicing System
 
-> **Standalone Pure-Dart Flutter Application** — Embeds the complete Philippine **BIR Electronic Invoicing System (EIS v2.01)**, **EOPT (`RR 7-2024`)**, **CWT (`RR 6-2026`)**, **CAS 6 Mandatory Books (`RR 9-2009` & PFRS)**, **Statutory `.DAT`/Form 2307**, and **Annex B SHA-256 Audit Trail** engine directly inside `eis_v2` — no Serverpod or Docker required to run.
+> **Pure-Dart Flutter + Serverpod 4.1.2 Platform** — Universal **BIR Electronic Invoicing System (EIS v2.01)** Middleware, **Computerized Accounting System (CAS)** Compliance Hub, and **Multi-Platform Invoicing/POS UI** supporting **Embedded Local**, **Serverpod RPC (`:8080`)**, and **REST Webhook (`:4000`)** execution modes.
 
-## Key Capabilities
+**Repository:** `https://github.com/bluegene37/eis.git`
 
-- **BIR EIS v2.01 Schema & Security**: 24-character `EisUniqueId` generation across multi-TIN / multi-branch profiles (`lastEisSequence`), RFC 7515 JWS (`RS256` RSA-2048 via PointyCastle), and `AES-256-GCM` payload encryption.
-- **3-Tier BIR EIS Gateway & 3-Day SLA Queue**: Built-in spec-faithful BIR simulator (`ACK-200`, `SYN004`, `VAL001`, `DUP001`, `SEC001`, `NET503`), plus `BIR_CERT_SANDBOX` (`eis-cert.bir.gov.ph`) and `BIR_PRODUCTION` (`eis.bir.gov.ph`) modes with retry queue recovery.
-- **EOPT (`RR 7-2024`) & CWT (`RR 6-2026`)**: 12% VAT, VAT-Inclusive extraction, Senior Citizen / PWD 20% VAT-Exempt discounts, Zero-Rated sales, and ATC withholding calculation (`WI010`, `WC010`, `WI158`, `WC158`, `WI160`, `WC160`, `WC100`).
-- **CAS 6 Mandatory Books & PFRS Trial Balance**: Balanced double-entry posting across `SJ`, `PJ`, `CRJ`, `CDJ`, `GJ`, and consolidated `GL`.
-- **ERP Connectors & Statutory Reports**: Xero, QuickBooks Online, Odoo (`l10n_ph`), CSV batch ingestion, BIR RELIEF SLSP, SAWT, QAP (`1601-EQ`) `.DAT`/`.CSV`, BIR Form 2307 HTML certificate, and RMC 5-2021 Annex B SHA-256 hash-chained audit trail.
-- **Dual Execution Mode**: Runs completely offline/standalone with local JSON persistence (`ApplicationSupportDirectory/eis_v2_store.json` on native, in-memory on Web), or switchable to an external REST bridge (`--dart-define=EIS_REST_URL=http://localhost:4000` or the in-app `Local Engine` / `REST API` switcher).
+## Architecture & Workspace Structure
+- `server/eis_server/`: Serverpod 4.1.2 backend (:8080 RPC + :4000 REST webhook bridge)
+- `server/eis_client/`: Auto-generated Serverpod RPC client (`client.eis.*`)
+- `server/docker-compose.yml`: Optional PostgreSQL 16 + Redis 7
 
-## Quick Start
-
-```bash
-flutter pub get
-flutter analyze
-flutter test
-flutter run
-```
-
-To point at an external `eis_server` REST bridge at launch:
-
-```bash
-flutter run --dart-define=EIS_REST_URL=http://localhost:4000
-```
+## Serverpod 3 Execution Modes (Legacy)
+- Embedded Local Engine (`flutter run`)
+- Serverpod RPC (`flutter run --dart-define=EIS_SERVERPOD_URL=http://localhost:8080`)
+- Remote REST Bridge (`flutter run --dart-define=EIS_REST_URL=http://localhost:4000`)
+-->
+<!--
+Gene - Nov, 20, 2026: Previous standalone eis_v2 README preserved in git history prior to Nov 24, 2026.
 -->

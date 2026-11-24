@@ -1,31 +1,63 @@
 // Gene - Nov, 20, 2026: Standalone Philippine BIR EIS v2.01 & CAS Flutter application with embedded pure-Dart compliance engine and optional Remote REST API mode.
 // Gene - Nov, 20, 2026: Added 3-mode backend support (Local Embedded Engine, Serverpod RPC :8080, and Remote REST API :4000).
-import 'package:eis_client/eis_client.dart' as sp;
+// Gene - Nov, 24, 2026: Migrated Serverpod RPC mode to Supabase (Auth + RLS Postgres + Edge Functions).
+import 'dart:async' show unawaited;
+// import 'package:eis_client/eis_client.dart' as sp;
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:material_ui/material_ui.dart';
-import 'package:serverpod_flutter/serverpod_flutter.dart';
+// import 'package:serverpod_flutter/serverpod_flutter.dart';
 import 'models/ies_models.dart';
+import 'models/workspace_models.dart';
 import 'screens/cas_books_screen.dart';
 import 'screens/command_center_screen.dart';
 import 'screens/connectors_screen.dart';
 import 'screens/invoicing_pos_screen.dart';
 import 'screens/statutory_reports_screen.dart';
+import 'screens/supabase_auth_screen.dart';
 import 'screens/vault_audit_screen.dart';
 import 'services/ies_api_client.dart';
+import 'services/supabase_eis_transport.dart';
 // Gene - Nov, 20, 2026: Added modern Soft UI 2.0 neumorphic theme and widgets.
 import 'theme/eis_neumorphic_theme.dart';
 import 'widgets/neumorphic_widgets.dart';
 
 const _envRestUrl = String.fromEnvironment('EIS_REST_URL');
-const _envServerpodUrl = String.fromEnvironment('EIS_SERVERPOD_URL');
+// const _envServerpodUrl = String.fromEnvironment('EIS_SERVERPOD_URL');
+// Gene - Nov, 24, 2026: Build-time Supabase URL & publishable key via --dart-define (never hardcoded).
+const _envSupabaseUrl = String.fromEnvironment('SUPABASE_URL');
+const _envSupabasePublishableKey =
+    String.fromEnvironment('SUPABASE_PUBLISHABLE_KEY');
 
 // Gene - Nov, 20, 2026: Build a Serverpod RPC IesApiClient with Android Emulator localhost mapping and trailing slash normalization.
-IesApiClient buildServerpodApiClient(String rawUrl) {
-  final trimmed = rawUrl.trim().isEmpty ? 'http://localhost:8080' : rawUrl.trim();
-  final resolved = trimmed.replaceFirst('://localhost', '://$localhost');
-  final normalized = resolved.endsWith('/') ? resolved : '$resolved/';
-  final client = sp.Client(normalized)
-    ..connectivityMonitor = FlutterConnectivityMonitor();
-  return IesApiClient(baseUrl: normalized, serverpodClient: client);
+// IesApiClient buildServerpodApiClient(String rawUrl) {
+//   final trimmed = rawUrl.trim().isEmpty ? 'http://localhost:8080' : rawUrl.trim();
+//   final resolved = trimmed.replaceFirst('://localhost', '://$localhost');
+//   final normalized = resolved.endsWith('/') ? resolved : '$resolved/';
+//   final client = sp.Client(normalized)
+//     ..connectivityMonitor = FlutterConnectivityMonitor();
+//   return IesApiClient(baseUrl: normalized, serverpodClient: client);
+// }
+
+// Gene - Nov, 24, 2026: Build a Supabase-backed IesApiClient with Android Emulator localhost mapping and trailing-slash stripping.
+IesApiClient buildSupabaseApiClient(String rawUrl, String publishableKey) {
+  final trimmed =
+      rawUrl.trim().isEmpty ? 'http://localhost:54321' : rawUrl.trim();
+  final resolved = (!kIsWeb && defaultTargetPlatform == TargetPlatform.android)
+      ? trimmed
+          .replaceFirst('://localhost', '://10.0.2.2')
+          .replaceFirst('://127.0.0.1', '://10.0.2.2')
+      : trimmed;
+  final normalized = resolved.replaceAll(RegExp(r'/+$'), '');
+  final cleanKey = publishableKey.trim();
+  return IesApiClient(
+    baseUrl: normalized,
+    supabasePublishableKey: cleanKey,
+    supabaseTransport: LiveSupabaseEisTransport(
+      url: normalized,
+      publishableKey: cleanKey,
+    ),
+  );
 }
 
 // void main() {
@@ -36,11 +68,27 @@ IesApiClient buildServerpodApiClient(String rawUrl) {
 //
 //   runApp(IesApp(apiClient: initialClient));
 // }
+// void main() {
+//   WidgetsFlutterBinding.ensureInitialized();
+//   final IesApiClient initialClient;
+//   if (_envServerpodUrl.isNotEmpty) {
+//     initialClient = buildServerpodApiClient(_envServerpodUrl);
+//   } else if (_envRestUrl.isNotEmpty) {
+//     initialClient = IesApiClient(baseUrl: _envRestUrl, useRemoteRest: true);
+//   } else {
+//     initialClient = IesApiClient();
+//   }
+//
+//   runApp(IesApp(apiClient: initialClient));
+// }
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   final IesApiClient initialClient;
-  if (_envServerpodUrl.isNotEmpty) {
-    initialClient = buildServerpodApiClient(_envServerpodUrl);
+  if (_envSupabaseUrl.isNotEmpty && _envSupabasePublishableKey.isNotEmpty) {
+    initialClient = buildSupabaseApiClient(
+      _envSupabaseUrl,
+      _envSupabasePublishableKey,
+    );
   } else if (_envRestUrl.isNotEmpty) {
     initialClient = IesApiClient(baseUrl: _envRestUrl, useRemoteRest: true);
   } else {
@@ -228,6 +276,22 @@ class _IesHomeShellState extends State<IesHomeShell> {
       _error = null;
     });
     try {
+      // Gene - Nov, 24, 2026: Verify Supabase auth & workspace membership before loading RLS-protected compliance data.
+      if (_api.isSupabase) {
+        await _api.refreshSession();
+        if (!_api.isAuthenticatedInSupabase) {
+          if (mounted) {
+            setState(() {
+              _taxpayers = const [];
+              _activeTaxpayer = null;
+              _summary = null;
+              _invoices = const [];
+            });
+          }
+          return;
+        }
+      }
+
       final taxpayers = await _api.fetchTaxpayers();
       final selectedTp = _activeTaxpayer != null &&
               taxpayers.any((t) => t.id == _activeTaxpayer!.id)
@@ -255,17 +319,35 @@ class _IesHomeShellState extends State<IesHomeShell> {
     }
   }
 
+  // Gene - Nov, 24, 2026: Workspace switcher, RBAC team roster, webhook key generator, and sign-out dialog for Supabase mode.
+  Future<void> _openWorkspaceDialog() async {
+    if (!_api.isSupabase || !_api.isAuthenticatedInSupabase) return;
+    final changed = await showDialog<bool>(
+      context: context,
+      builder: (_) => _WorkspaceRbacDialog(api: _api),
+    );
+    if (changed == true && mounted) {
+      setState(() {
+        _activeTaxpayer = null;
+        _summary = null;
+      });
+      await _refreshAll();
+    }
+  }
+
   Future<void> _openBackendModeDialog() async {
     final nextClient = await showDialog<IesApiClient>(
       context: context,
       builder: (_) => _BackendModeDialog(currentClient: _api),
     );
     if (nextClient != null && mounted) {
+      final previous = _api;
       setState(() {
         _api = nextClient;
         _activeTaxpayer = null;
         _summary = null;
       });
+      unawaited(previous.dispose());
       await _refreshAll();
     }
   }
@@ -535,11 +617,18 @@ class _IesHomeShellState extends State<IesHomeShell> {
     final showInlineTaxpayer = screenWidth >= 780;
     final tokens = EisNeumorphicTokens.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    // final modeIcon = switch (_api.backendMode) {
+    //   EisBackendMode.embedded => Icons.memory_rounded,
+    //   EisBackendMode.serverpod => Icons.dns_rounded,
+    //   EisBackendMode.remoteRest => Icons.cloud_outlined,
+    // };
+    // Gene - Nov, 24, 2026: Display Supabase icon and gate Workspace shell on Auth/Workspace state.
     final modeIcon = switch (_api.backendMode) {
       EisBackendMode.embedded => Icons.memory_rounded,
-      EisBackendMode.serverpod => Icons.dns_rounded,
+      EisBackendMode.supabase => Icons.bolt_rounded,
       EisBackendMode.remoteRest => Icons.cloud_outlined,
     };
+    final showAuthGate = _api.isSupabase && !_api.isAuthenticatedInSupabase;
 
     return Scaffold(
       appBar: AppBar(
@@ -591,6 +680,40 @@ class _IesHomeShellState extends State<IesHomeShell> {
               ),
             ),
           ),
+          if (_api.isSupabase && _api.isAuthenticatedInSupabase)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: NeumorphicTapPill(
+                tooltip:
+                    'Workspace (${_api.activeWorkspace!.workspaceCode}) • Role: ${_api.activeRole!.label}',
+                onTap: _openWorkspaceDialog,
+                padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+                borderRadius: 12,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.shield_outlined,
+                      size: 15,
+                      color: tokens.accentSecondary,
+                    ),
+                    const SizedBox(width: 6),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 160),
+                      child: Text(
+                        _api.activeRole!.label,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: tokens.textPrimary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           if (showInlineTaxpayer && _taxpayers.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(right: 8),
@@ -635,7 +758,24 @@ class _IesHomeShellState extends State<IesHomeShell> {
               child: _buildTaxpayerDropdown(tokens, isExpanded: true),
             ),
           Expanded(
-            child: Row(
+            child: showAuthGate
+                ? (_loading
+                    ? const Center(child: CircularProgressIndicator())
+                    : SupabaseAuthScreen(
+                        api: _api,
+                        onAuthenticated: _refreshAll,
+                        onOpenBackendDialog: _openBackendModeDialog,
+                        onSwitchToLocalEngine: () {
+                          setState(() {
+                            _api = IesApiClient();
+                            _activeTaxpayer = null;
+                            _summary = null;
+                            _invoices = const [];
+                          });
+                          _refreshAll();
+                        },
+                      ))
+                : Row(
               children: [
                 if (isWide)
                   NeumorphicSurface(
@@ -769,7 +909,7 @@ class _IesHomeShellState extends State<IesHomeShell> {
           ),
         ],
       ),
-      bottomNavigationBar: isWide
+      bottomNavigationBar: (isWide || showAuthGate)
           ? null
           : SafeArea(
               top: false,
@@ -903,81 +1043,84 @@ class _BackendModeDialog extends StatefulWidget {
 //   }
 // }
 // Gene - Nov, 20, 2026: 3-mode backend switcher dialog supporting Local Embedded Engine, Serverpod RPC (:8080), and Remote REST (:4000).
-class _BackendModeDialogState extends State<_BackendModeDialog> {
-  late EisBackendMode _mode;
-  late final TextEditingController _urlCtrl;
-
-  @override
-  void initState() {
-    super.initState();
-    _mode = widget.currentClient.backendMode;
-    final currentUrl = widget.currentClient.baseUrl.trim();
-    _urlCtrl = TextEditingController(
-      text: currentUrl.isNotEmpty
-          ? currentUrl
-          : (_mode == EisBackendMode.serverpod
-              ? 'http://localhost:8080/'
-              : 'http://localhost:4000'),
-    );
-  }
-
-  @override
-  void dispose() {
-    _urlCtrl.dispose();
-    super.dispose();
-  }
-
-  void _onModeChanged(EisBackendMode nextMode) {
-    setState(() {
-      _mode = nextMode;
-      final current = _urlCtrl.text.trim();
-      if (nextMode == EisBackendMode.serverpod &&
-          (current.isEmpty || current.contains(':4000'))) {
-        _urlCtrl.text = 'http://localhost:8080/';
-      } else if (nextMode == EisBackendMode.remoteRest &&
-          (current.isEmpty || current.contains(':8080'))) {
-        _urlCtrl.text = 'http://localhost:4000';
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Backend Execution Mode'),
-      content: SizedBox(
-        width: 480,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-            SegmentedButton<EisBackendMode>(
-              segments: const [
-                ButtonSegment(
-                  value: EisBackendMode.embedded,
-                  label: Text('Local'),
-                  icon: Icon(Icons.memory_rounded),
-                ),
-                ButtonSegment(
-                  value: EisBackendMode.serverpod,
-                  label: Text('Serverpod'),
-                  icon: Icon(Icons.dns_rounded),
-                ),
-                ButtonSegment(
-                  value: EisBackendMode.remoteRest,
-                  label: Text('REST'),
-                  icon: Icon(Icons.cloud_outlined),
-                ),
-              ],
-              selected: {_mode},
-              onSelectionChanged: (sel) => _onModeChanged(sel.first),
-            ),
-            const SizedBox(height: 14),
+// class _BackendModeDialogState extends State<_BackendModeDialog> {
+//   late EisBackendMode _mode;
+//   late final TextEditingController _urlCtrl;
+//
+//   @override
+//   void initState() {
+//     super.initState();
+//     _mode = widget.currentClient.backendMode;
+//     final currentUrl = widget.currentClient.baseUrl.trim();
+//     _urlCtrl = TextEditingController(
+//       text: currentUrl.isNotEmpty
+//           ? currentUrl
+//           : (_mode == EisBackendMode.serverpod
+//               ? 'http://localhost:8080/'
+//               : 'http://localhost:4000'),
+//     );
+//   }
+//
+//   @override
+//   void dispose() {
+//     _urlCtrl.dispose();
+//     super.dispose();
+//   }
+//
+//   void _onModeChanged(EisBackendMode nextMode) {
+//     setState(() {
+//       _mode = nextMode;
+//       final current = _urlCtrl.text.trim();
+//       if (nextMode == EisBackendMode.serverpod &&
+//           (current.isEmpty || current.contains(':4000'))) {
+//         _urlCtrl.text = 'http://localhost:8080/';
+//       } else if (nextMode == EisBackendMode.remoteRest &&
+//           (current.isEmpty || current.contains(':8080'))) {
+//         _urlCtrl.text = 'http://localhost:4000';
+//       }
+//     });
+//   }
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     return AlertDialog(
+//       title: const Text('Backend Execution Mode'),
+//       content: SizedBox(
+//         width: 480,
+//         child: SingleChildScrollView(
+//           child: Column(
+//             mainAxisSize: MainAxisSize.min,
+//             crossAxisAlignment: CrossAxisAlignment.start,
+//             children: [
+//             SegmentedButton<EisBackendMode>(
+//               segments: const [
+//                 ButtonSegment(
+//                   value: EisBackendMode.embedded,
+//                   label: Text('Local'),
+//                   icon: Icon(Icons.memory_rounded),
+//                 ),
+//                 ButtonSegment(
+//                   value: EisBackendMode.serverpod,
+//                   label: Text('Serverpod'),
+//                   icon: Icon(Icons.dns_rounded),
+//                 ),
+//                 ButtonSegment(
+//                   value: EisBackendMode.remoteRest,
+//                   label: Text('REST'),
+//                   icon: Icon(Icons.cloud_outlined),
+//                 ),
+//               ],
+//               selected: {_mode},
+//               onSelectionChanged: (sel) => _onModeChanged(sel.first),
+//             ),
+//             const SizedBox(height: 14),
 //             if (_mode == EisBackendMode.embedded)
-//               Text(
-//                 'Runs the full pure-Dart BIR EIS v2.01 (RSA-2048 JWS, AES-256-GCM, EOPT, 6 CAS Books, .DAT/2307 & Annex B Hash Chain) directly inside this Flutter app.',
-//                 style: Theme.of(context).textTheme.bodySmall,
+//               NeumorphicWell(
+//                 padding: const EdgeInsets.all(14),
+//                 child: Text(
+//                   'Runs the full pure-Dart BIR EIS v2.01 (RSA-2048 JWS, AES-256-GCM, EOPT, 6 CAS Books, .DAT/2307 & Annex B Hash Chain) directly inside this Flutter app.',
+//                   style: Theme.of(context).textTheme.bodySmall,
+//                 ),
 //               )
 //             else if (_mode == EisBackendMode.serverpod) ...[
 //               TextField(
@@ -988,10 +1131,13 @@ class _BackendModeDialogState extends State<_BackendModeDialog> {
 //                   border: OutlineInputBorder(),
 //                 ),
 //               ),
-//               const SizedBox(height: 8),
-//               Text(
-//                 'Start backend: cd server/eis_server && dart bin/main.dart (localhost auto-maps to 10.0.2.2 on Android Emulator).',
-//                 style: Theme.of(context).textTheme.bodySmall,
+//               const SizedBox(height: 10),
+//               NeumorphicWell(
+//                 padding: const EdgeInsets.all(12),
+//                 child: Text(
+//                   'Start backend: cd server/eis_server && dart bin/main.dart (localhost auto-maps to 10.0.2.2 on Android Emulator).',
+//                   style: Theme.of(context).textTheme.bodySmall,
+//                 ),
 //               ),
 //             ] else ...[
 //               TextField(
@@ -1002,57 +1148,191 @@ class _BackendModeDialogState extends State<_BackendModeDialog> {
 //                   border: OutlineInputBorder(),
 //                 ),
 //               ),
-//               const SizedBox(height: 8),
-//               Text(
-//                 'Tip: On Android Emulator use http://10.0.2.2:4000 to reach a local eis_server REST bridge.',
-//                 style: Theme.of(context).textTheme.bodySmall,
+//               const SizedBox(height: 10),
+//               NeumorphicWell(
+//                 padding: const EdgeInsets.all(12),
+//                 child: Text(
+//                   'Tip: On Android Emulator use http://10.0.2.2:4000 to reach a local eis_server REST bridge.',
+//                   style: Theme.of(context).textTheme.bodySmall,
+//                 ),
 //               ),
 //             ],
-            // Gene - Nov, 20, 2026: Wrap mode descriptions and backend tips inside recessed NeumorphicWell containers.
-            if (_mode == EisBackendMode.embedded)
-              NeumorphicWell(
-                padding: const EdgeInsets.all(14),
-                child: Text(
-                  'Runs the full pure-Dart BIR EIS v2.01 (RSA-2048 JWS, AES-256-GCM, EOPT, 6 CAS Books, .DAT/2307 & Annex B Hash Chain) directly inside this Flutter app.',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              )
-            else if (_mode == EisBackendMode.serverpod) ...[
-              TextField(
-                controller: _urlCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Serverpod RPC URL',
-                  hintText: 'http://localhost:8080/',
-                  border: OutlineInputBorder(),
-                ),
+//           ],
+//           ),
+//         ),
+//       ),
+//       actions: [
+//         TextButton(
+//           onPressed: () => Navigator.of(context).pop(),
+//           child: const Text('Cancel'),
+//         ),
+//         FilledButton(
+//           onPressed: () {
+//             if (_mode == EisBackendMode.embedded) {
+//               Navigator.of(context).pop(IesApiClient());
+//               return;
+//             }
+//             if (_mode == EisBackendMode.serverpod) {
+//               Navigator.of(context).pop(buildServerpodApiClient(_urlCtrl.text));
+//               return;
+//             }
+//             final url = _urlCtrl.text.trim().isEmpty
+//                 ? 'http://localhost:4000'
+//                 : _urlCtrl.text.trim();
+//             Navigator.of(context).pop(
+//               IesApiClient(baseUrl: url, useRemoteRest: true),
+//             );
+//           },
+//           child: const Text('Apply'),
+//         ),
+//       ],
+//     );
+//   }
+// }
+
+// Gene - Nov, 24, 2026: Updated 3-mode backend switcher dialog for Local Engine, Supabase, and REST API.
+class _BackendModeDialogState extends State<_BackendModeDialog> {
+  late EisBackendMode _mode;
+  late final TextEditingController _urlCtrl;
+  late final TextEditingController _anonKeyCtrl;
+  String? _validationError;
+
+  @override
+  void initState() {
+    super.initState();
+    _mode = widget.currentClient.backendMode;
+    final currentUrl = widget.currentClient.baseUrl.trim();
+    _urlCtrl = TextEditingController(
+      text: currentUrl.isNotEmpty
+          ? currentUrl
+          : (_mode == EisBackendMode.supabase
+              ? 'http://127.0.0.1:54321'
+              : 'http://localhost:4000'),
+    );
+    _anonKeyCtrl = TextEditingController(
+      text: widget.currentClient.supabasePublishableKey ??
+          _envSupabasePublishableKey,
+    );
+  }
+
+  @override
+  void dispose() {
+    _urlCtrl.dispose();
+    _anonKeyCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onModeChanged(EisBackendMode nextMode) {
+    setState(() {
+      _mode = nextMode;
+      _validationError = null;
+      final current = _urlCtrl.text.trim();
+      if (nextMode == EisBackendMode.supabase &&
+          (current.isEmpty || current.contains(':4000'))) {
+        _urlCtrl.text = _envSupabaseUrl.isNotEmpty
+            ? _envSupabaseUrl
+            : 'http://127.0.0.1:54321';
+      } else if (nextMode == EisBackendMode.remoteRest &&
+          (current.isEmpty || current.contains(':54321'))) {
+        _urlCtrl.text = 'http://localhost:4000';
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = EisNeumorphicTokens.of(context);
+    return AlertDialog(
+      title: const Text('Backend Execution Mode'),
+      content: SizedBox(
+        width: 500,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SegmentedButton<EisBackendMode>(
+                segments: const [
+                  ButtonSegment(
+                    value: EisBackendMode.embedded,
+                    label: Text('Local'),
+                    icon: Icon(Icons.memory_rounded),
+                  ),
+                  ButtonSegment(
+                    value: EisBackendMode.supabase,
+                    label: Text('Supabase'),
+                    icon: Icon(Icons.bolt_rounded),
+                  ),
+                  ButtonSegment(
+                    value: EisBackendMode.remoteRest,
+                    label: Text('REST'),
+                    icon: Icon(Icons.cloud_outlined),
+                  ),
+                ],
+                selected: {_mode},
+                onSelectionChanged: (sel) => _onModeChanged(sel.first),
               ),
-              const SizedBox(height: 10),
-              NeumorphicWell(
-                padding: const EdgeInsets.all(12),
-                child: Text(
-                  'Start backend: cd server/eis_server && dart bin/main.dart (localhost auto-maps to 10.0.2.2 on Android Emulator).',
-                  style: Theme.of(context).textTheme.bodySmall,
+              const SizedBox(height: 14),
+              if (_mode == EisBackendMode.embedded)
+                NeumorphicWell(
+                  padding: const EdgeInsets.all(14),
+                  child: Text(
+                    'Runs the full pure-Dart BIR EIS v2.01 (RSA-2048 JWS, AES-256-GCM, EOPT, 6 CAS Books, .DAT/2307 & Annex B Hash Chain) directly inside this Flutter app.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                )
+              else if (_mode == EisBackendMode.supabase) ...[
+                TextField(
+                  controller: _urlCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Supabase Project URL',
+                    hintText: 'https://<project-ref>.supabase.co or http://127.0.0.1:54321',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
-              ),
-            ] else ...[
-              TextField(
-                controller: _urlCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'REST Bridge Base URL',
-                  hintText: 'http://localhost:4000',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _anonKeyCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Supabase Publishable / Anon Key',
+                    hintText: 'sb_publishable_... (from Supabase Dashboard or supabase status)',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 10),
-              NeumorphicWell(
-                padding: const EdgeInsets.all(12),
-                child: Text(
-                  'Tip: On Android Emulator use http://10.0.2.2:4000 to reach a local eis_server REST bridge.',
-                  style: Theme.of(context).textTheme.bodySmall,
+                const SizedBox(height: 10),
+                NeumorphicWell(
+                  padding: const EdgeInsets.all(12),
+                  child: Text(
+                    'Connects to Supabase Auth, RLS-protected PostgreSQL, private RSA/AES key vault, and BIR Edge Functions (or pass --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_PUBLISHABLE_KEY=...).',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
                 ),
-              ),
+              ] else ...[
+                TextField(
+                  controller: _urlCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'REST Bridge Base URL',
+                    hintText: 'http://localhost:4000',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                NeumorphicWell(
+                  padding: const EdgeInsets.all(12),
+                  child: Text(
+                    'Connects to an external /api REST server (on Android Emulator use http://10.0.2.2:4000).',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+              ],
+              if (_validationError != null) ...[
+                const SizedBox(height: 10),
+                Text(
+                  _validationError!,
+                  style: TextStyle(color: tokens.danger, fontSize: 12),
+                ),
+              ],
             ],
-          ],
           ),
         ),
       ),
@@ -1067,8 +1347,17 @@ class _BackendModeDialogState extends State<_BackendModeDialog> {
               Navigator.of(context).pop(IesApiClient());
               return;
             }
-            if (_mode == EisBackendMode.serverpod) {
-              Navigator.of(context).pop(buildServerpodApiClient(_urlCtrl.text));
+            if (_mode == EisBackendMode.supabase) {
+              final url = _urlCtrl.text.trim();
+              final key = _anonKeyCtrl.text.trim();
+              if (url.isEmpty || key.isEmpty) {
+                setState(() {
+                  _validationError =
+                      'Both Supabase Project URL and Publishable/Anon Key are required.';
+                });
+                return;
+              }
+              Navigator.of(context).pop(buildSupabaseApiClient(url, key));
               return;
             }
             final url = _urlCtrl.text.trim().isEmpty
@@ -1079,6 +1368,341 @@ class _BackendModeDialogState extends State<_BackendModeDialog> {
             );
           },
           child: const Text('Apply'),
+        ),
+      ],
+    );
+  }
+}
+
+// Gene - Nov, 24, 2026: Workspace switcher, RBAC team member roster, webhook API key generator, and sign-out dialog.
+class _WorkspaceRbacDialog extends StatefulWidget {
+  final IesApiClient api;
+
+  const _WorkspaceRbacDialog({required this.api});
+
+  @override
+  State<_WorkspaceRbacDialog> createState() => _WorkspaceRbacDialogState();
+}
+
+class _WorkspaceRbacDialogState extends State<_WorkspaceRbacDialog> {
+  List<WorkspaceMemberRecord> _members = const [];
+  bool _loading = false;
+  String? _status;
+  String? _error;
+
+  final _memberEmailCtrl = TextEditingController();
+  EisUserRole _memberRole = EisUserRole.accountant;
+  final _newWorkspaceCtrl = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMembers();
+  }
+
+  @override
+  void dispose() {
+    _memberEmailCtrl.dispose();
+    _newWorkspaceCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadMembers() async {
+    setState(() => _loading = true);
+    try {
+      final list = await widget.api.fetchWorkspaceMembers();
+      if (mounted) setState(() => _members = list);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _assignMember() async {
+    final email = _memberEmailCtrl.text.trim();
+    if (email.isEmpty) return;
+    setState(() {
+      _loading = true;
+      _error = null;
+      _status = null;
+    });
+    try {
+      final added = await widget.api.upsertWorkspaceMember(
+        email: email,
+        role: _memberRole,
+      );
+      _memberEmailCtrl.clear();
+      await _loadMembers();
+      if (mounted) {
+        setState(() {
+          _status = 'Assigned ${added.role.label} to ${added.email}.';
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _createWebhookKey() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+      _status = null;
+    });
+    try {
+      final res = await widget.api.createWebhookKey(
+        connector: 'generic_pos',
+        label: 'POS / ERP Webhook',
+      );
+      if (mounted) {
+        setState(() {
+          _status = 'Webhook API Key (copy now): ${res['apiKey']}';
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final session = widget.api.sessionState;
+    final active = widget.api.activeWorkspace!;
+    final role = active.role;
+    final tokens = EisNeumorphicTokens.of(context);
+
+    return AlertDialog(
+      title: Text('Workspace • ${active.workspaceName}'),
+      content: SizedBox(
+        width: 540,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              NeumorphicWell(
+                borderRadius: 12,
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Signed in as: ${session.email ?? 'Unknown'}',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Code: ${active.workspaceCode}  •  Your Role: ${role.label}',
+                      style: TextStyle(fontSize: 12, color: tokens.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+              if (session.workspaces.length > 1) ...[
+                const SizedBox(height: 14),
+                DropdownButtonFormField<String>(
+                  initialValue: active.workspaceId,
+                  decoration: const InputDecoration(
+                    labelText: 'Switch Active Workspace',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: session.workspaces
+                      .map(
+                        (w) => DropdownMenuItem(
+                          value: w.workspaceId,
+                          child: Text('${w.workspaceName} (${w.role.label})'),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (id) {
+                    if (id == null) return;
+                    final next = session.workspaces
+                        .firstWhere((w) => w.workspaceId == id);
+                    widget.api.setActiveWorkspace(next);
+                    Navigator.of(context).pop(true);
+                  },
+                ),
+              ],
+              const SizedBox(height: 14),
+              Text(
+                'Workspace Members (${_members.length})',
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 8),
+              if (_loading && _members.isEmpty)
+                const LinearProgressIndicator()
+              else
+                ..._members.map(
+                  (m) => Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            m.email,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                        ),
+                        Chip(
+                          label: Text(
+                            m.role.label,
+                            style: const TextStyle(fontSize: 11),
+                          ),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              if (role.canManageMembers) ...[
+                const Divider(height: 24),
+                const Text(
+                  'Assign Team Member Role',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: TextField(
+                        controller: _memberEmailCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Existing User Email',
+                          isDense: true,
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      flex: 2,
+                      child: DropdownButtonFormField<EisUserRole>(
+                        initialValue: _memberRole,
+                        isDense: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Role',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: EisUserRole.values
+                            .map(
+                              (r) => DropdownMenuItem(
+                                value: r,
+                                child: Text(r.label),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (r) {
+                          if (r != null) setState(() => _memberRole = r);
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    FilledButton.tonalIcon(
+                      onPressed: _loading ? null : _assignMember,
+                      icon: const Icon(Icons.person_add_rounded, size: 16),
+                      label: const Text('Assign Role'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: _loading ? null : _createWebhookKey,
+                      icon: const Icon(Icons.key_rounded, size: 16),
+                      label: const Text('Generate ERP Webhook Key'),
+                    ),
+                  ],
+                ),
+              ],
+              const Divider(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _newWorkspaceCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'New Company Workspace Name',
+                        isDense: true,
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  OutlinedButton(
+                    onPressed: _loading
+                        ? null
+                        : () async {
+                            final name = _newWorkspaceCtrl.text.trim();
+                            if (name.isEmpty) return;
+                            setState(() => _loading = true);
+                            try {
+                              await widget.api.bootstrapSupabaseWorkspace(
+                                workspaceName: name,
+                                seedDemo: true,
+                              );
+                              if (context.mounted) {
+                                Navigator.of(context).pop(true);
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                setState(() {
+                                  _error = e
+                                      .toString()
+                                      .replaceFirst('Exception: ', '');
+                                  _loading = false;
+                                });
+                              }
+                            }
+                          },
+                    child: const Text('Create'),
+                  ),
+                ],
+              ),
+              if (_status != null) ...[
+                const SizedBox(height: 10),
+                SelectableText(
+                  _status!,
+                  style: TextStyle(color: tokens.success, fontSize: 12),
+                ),
+              ],
+              if (_error != null) ...[
+                const SizedBox(height: 10),
+                Text(
+                  _error!,
+                  style: TextStyle(color: tokens.danger, fontSize: 12),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton.icon(
+          onPressed: () async {
+            await widget.api.signOutSupabase();
+            if (context.mounted) Navigator.of(context).pop(true);
+          },
+          icon: const Icon(Icons.logout_rounded, size: 16),
+          label: const Text('Sign Out'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Done'),
         ),
       ],
     );
